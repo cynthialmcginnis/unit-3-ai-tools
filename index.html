@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit 3: AI Tools and Implementation</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e9e6de;--paper:#fbf9f3;--paper2:#f2efe6;--ink:#1c2431;--muted:#5a6271;--line:#d8d2c2;--blue:#1f5aa6;--blue-soft:#dbe6f5;--orange:#b2501c;--orange-soft:#f6e1d3}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11151c;--paper:#1a2029;--paper2:#222a35;--ink:#e9e6de;--muted:#a3abb8;--line:#333d4a;--blue:#7fb0f0;--blue-soft:#18283f;--orange:#f0915a;--orange-soft:#3a2416;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11151c;--paper:#1a2029;--paper2:#222a35;--ink:#e9e6de;--muted:#a3abb8;--line:#333d4a;--blue:#7fb0f0;--blue-soft:#18283f;--orange:#f0915a;--orange-soft:#3a2416;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.55 "Source Sans 3",system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:40px 16px 60px}
+h1,h2{font-family:Fraunces,Georgia,serif;line-height:1.15;margin:0 0 .4em}
+h1{font-size:clamp(2rem,6vw,3.2rem)} h2{font-size:1.5rem}
+.kicker{text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;font-weight:700;color:var(--muted)}
+.lead{font-size:1.15rem;color:var(--muted);margin:0 0 28px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:24px 24px 22px;display:flex;flex-direction:column}
+.card .tag{font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.card.lec{border-top:6px solid var(--blue)} .card.lec .tag{color:var(--blue)}
+.card.spr{border-top:6px solid var(--orange)} .card.spr .tag{color:var(--orange)}
+.card p{margin:.3em 0 .9em}
+.card .sp{flex:1}
+.btn{display:inline-block;text-decoration:none;font-weight:700;border-radius:10px;padding:10px 18px;color:#fff;align-self:flex-start}
+.lec .btn{background:var(--blue)} .spr .btn{background:var(--orange)}
+.small{font-size:.92rem;color:var(--muted)}
+.small a{color:var(--ink)}
+.order{background:var(--paper2);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-top:22px}
+.order ol{margin:.3em 0 0;padding-left:22px}
+@media (max-width:700px){.cards{grid-template-columns:1fr}}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn{color:#11151c}}
+:root[data-theme="dark"] .btn{color:#11151c}
+</style>
+</head>
+<body>
+<main>
+ <div class="kicker">Unit 3</div>
+ <h1>AI Tools and Implementation</h1>
+ <p class="lead">Why most AI projects fail, what the successful ones do differently, and how to test a cloud AI service before you trust it.</p>
+
+ <div class="cards">
+  <div class="card lec">
+   <div class="tag">Lecture</div>
+   <h2>AI Tools and Implementation</h2>
+   <p>Follow along on your own laptop during class. Answer each check and type your notes as we go. At the end, print the lecture or save it as a PDF (Portable Document Format), and your answers print with it.</p>
+   <div class="sp"></div>
+   <a class="btn" href="lecture.html">Open the lecture</a>
+  </div>
+  <div class="card spr">
+   <div class="tag">AI Lab Sprint</div>
+   <h2>Shelf Check</h2>
+   <p>Your first run in Amazon Rekognition, with your team. Each person writes an answer key, tests 5 images in the AWS (Amazon Web Services) Learner Lab, and the team reports what Rekognition got wrong.</p>
+   <div class="sp"></div>
+   <a class="btn" href="shelf-check.html">Open Shelf Check</a>
+   <p class="small" style="margin:12px 0 0">The 15 images are inside the page. To get them as separate files, <a href="shelf-check-images.zip" download>download the image set</a>.</p>
+  </div>
+ </div>
+
+ <div class="order">
+  <b>Tonight, in this order</b>
+  <ol>
+   <li>Open the lecture and follow along.</li>
+   <li>At the break, open the Learner Lab and select Start Lab, so it is ready when you sit down.</li>
+   <li>After the break, open Shelf Check with your team.</li>
+  </ol>
+ </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,1734 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Tools and Implementation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Same book layout as the other unit lectures. Unit 3 accent: chart blue. */
+:root{
+  --bg:#e7e4dc; --paper:#fbf9f3; --paper2:#f2efe6; --ink:#1c2431; --muted:#5a6271; --line:#d8d2c2;
+  --accent:#1f5aa6; --accent-soft:#dbe6f5; --amber:#b2650c; --amber-soft:#f8e6cc;
+  --good:#2e7d4f; --good-soft:#dcefe2; --bad:#b3362c; --bad-soft:#f6dcd8; --violet:#5b4bb0; --violet-soft:#e4e0f6;
+  --spine:rgba(0,0,0,.10); --shadow:0 18px 50px rgba(30,30,40,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10141b; --paper:#1a2029; --paper2:#222a35; --ink:#e9e6de; --muted:#a3abb8; --line:#333d4a;
+    --accent:#7fb0f0; --accent-soft:#18283f; --amber:#f0a94a; --amber-soft:#3d2c14;
+    --good:#6fcf97; --good-soft:#173324; --bad:#f07a6e; --bad-soft:#3d1c19; --violet:#a99cf0; --violet-soft:#29244a;
+    --spine:rgba(0,0,0,.45); --shadow:0 18px 50px rgba(0,0,0,.5); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10141b; --paper:#1a2029; --paper2:#222a35; --ink:#e9e6de; --muted:#a3abb8; --line:#333d4a;
+  --accent:#7fb0f0; --accent-soft:#18283f; --amber:#f0a94a; --amber-soft:#3d2c14;
+  --good:#6fcf97; --good-soft:#173324; --bad:#f07a6e; --bad-soft:#3d1c19; --violet:#a99cf0; --violet-soft:#29244a;
+  --spine:rgba(0,0,0,.45); --shadow:0 18px 50px rgba(0,0,0,.5); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:18px/1.55 "Source Sans 3",system-ui,sans-serif;overflow:hidden}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;line-height:1.15;margin:0 0 .5em;text-wrap:balance}
+h1{font-size:clamp(2rem,5vw,3.6rem)} h2{font-size:clamp(1.5rem,3.2vw,2.3rem)} h3{font-size:1.2rem}
+p{margin:.4em 0 .9em} button{font:inherit;color:inherit}
+code,.mono{font-family:"JetBrains Mono",monospace;font-size:.9em}
+
+#bar{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--paper);border-bottom:1px solid var(--line);z-index:20}
+#bar .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+#bar .title span{color:var(--muted);font-weight:400}
+.tb{border:1px solid var(--line);background:var(--paper2);border-radius:8px;padding:5px 11px;cursor:pointer;font-size:.88rem;white-space:nowrap}
+.tb:hover{border-color:var(--accent)} .tb.on{background:var(--accent);color:var(--paper);border-color:var(--accent)}
+#count{font-family:"JetBrains Mono",monospace;font-size:.85rem;color:var(--muted);min-width:56px;text-align:center}
+#progress{position:fixed;top:52px;left:0;height:3px;background:var(--accent);z-index:21;transition:width .4s}
+
+#stage{position:fixed;top:64px;bottom:12px;left:12px;right:12px;perspective:2400px}
+#stage.withnotes{right:372px}
+.slide{display:none;position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--paper);border-radius:6px 14px 14px 6px;box-shadow:var(--shadow);transform-origin:left center;backface-visibility:hidden}
+.slide::before{content:"";position:sticky;top:0;float:left;width:22px;height:100%;margin-right:-22px;background:linear-gradient(90deg,var(--spine),transparent);pointer-events:none}
+.slide.active{display:block;z-index:1}
+.slide.out{display:block;z-index:3;animation:turnOut .65s cubic-bezier(.5,.05,.7,.4) forwards}
+.slide.in{display:block;z-index:3;animation:turnIn .65s cubic-bezier(.2,.6,.4,1)}
+@keyframes turnOut{to{transform:rotateY(-105deg);opacity:.15}}
+@keyframes turnIn{from{transform:rotateY(-105deg);opacity:.15}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.slide.out,.slide.in{animation:none}}
+.page{max-width:1080px;margin:0 auto;padding:38px 48px 60px}
+.pnum{position:absolute;right:20px;bottom:12px;font-size:.8rem;color:var(--muted);font-family:"JetBrains Mono",monospace}
+.kicker{text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:6px}
+.lead{font-size:1.2rem}
+.muted{color:var(--muted)}
+.do{border-left:5px solid var(--amber);background:var(--amber-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+.do b:first-child{color:var(--amber)}
+.def{border-left:5px solid var(--accent);background:var(--accent-soft);padding:10px 16px;border-radius:0 10px 10px 0;margin:12px 0}
+.notes{display:none}
+
+.slide.sectiontitle.active,.slide.sectiontitle.in,.slide.sectiontitle.out{display:flex;align-items:center}
+.sectiontitle .page{width:100%}
+.bignum{font-family:Fraunces,serif;font-size:clamp(6rem,16vw,11rem);line-height:.9;color:var(--accent);opacity:.9}
+.sectiontitle h2{font-size:clamp(2rem,5vw,3.4rem)}
+
+.cover{background:radial-gradient(1200px 600px at 85% 10%,var(--accent-soft),transparent 60%),var(--paper)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{background:var(--paper2);border:1px solid var(--line);border-radius:99px;padding:3px 12px;font-size:.92rem}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.grid2>*,.grid3>*{min-width:0}
+.card{background:var(--paper2);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h3{margin-bottom:.3em}
+table{border-collapse:collapse;width:100%;font-size:.95rem;margin:10px 0}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tw{overflow-x:auto}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--paper);border-radius:9px;padding:8px 16px;cursor:pointer;font-weight:600}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.stat{font-family:Fraunces,serif;font-size:2.1rem;line-height:1}
+.good{color:var(--good)} .bad{color:var(--bad)} .amb{color:var(--amber)}
+.three{width:100%;height:380px;border-radius:12px;background:var(--paper2);border:1px solid var(--line);position:relative;cursor:grab;touch-action:none}
+.three canvas{display:block;max-width:100%}
+.three .hint{position:absolute;left:12px;bottom:8px;font-size:.8rem;color:var(--muted);pointer-events:none}
+.three .nogl{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted)}
+
+.agenda{list-style:none;padding:0;margin:0;counter-reset:a}
+.agenda li{counter-increment:a;display:flex;gap:14px;align-items:baseline;padding:10px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.agenda li::before{content:counter(a);font-family:Fraunces,serif;color:var(--accent);font-size:1.5rem;min-width:28px}
+.agenda li:hover b{color:var(--accent)}
+
+.q{background:var(--paper2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.q .qt{font-weight:600;margin-bottom:8px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts.col{flex-direction:column;align-items:stretch}
+.opt{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.95rem;text-align:left}
+.opt:hover{border-color:var(--accent)}
+.opt.on{border-color:var(--accent);background:var(--accent-soft)}
+.opt.right{background:var(--good-soft);border-color:var(--good)} .opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.opt.part{background:var(--amber-soft);border-color:var(--amber)}
+.why{margin-top:8px;font-size:.95rem;display:none}
+.why.show{display:block}
+.score{font-weight:700;color:var(--accent)}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{border:1px solid var(--line);background:var(--paper2);border-radius:99px;padding:6px 14px;cursor:pointer}
+.tab.on{background:var(--accent);color:var(--paper);border-color:var(--accent)}
+input[type=text],input[type=number],textarea,select{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+input[type=text]{width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+label.f{display:block;font-weight:600;margin:10px 0 4px;font-size:.95rem}
+
+.tries{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.try{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:6px 10px;cursor:pointer;font-size:.92rem}
+.try:hover{border-color:var(--accent)} .try.on{border-color:var(--accent);background:var(--accent-soft)}
+.try b{color:var(--accent);white-space:nowrap}
+.trymsg{margin-top:10px;font-size:.95rem;border-left:4px solid var(--accent);padding:6px 12px;background:var(--accent-soft);border-radius:0 8px 8px 0}
+.trymsg:empty{display:none}
+
+/* hook projects */
+.projects{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:8px;max-width:620px;margin:12px 0}
+.proj{aspect-ratio:1;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--paper);font-weight:700;font-size:.8rem;transition:background .4s,transform .4s}
+.proj.fail{background:var(--bad);transform:rotate(-6deg)}
+.proj.guess{outline:3px solid var(--amber);outline-offset:2px}
+
+/* pair matching */
+.pairs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 22px}
+.pairs>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pbtn{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:9px 12px;cursor:pointer;text-align:left;font-size:.95rem}
+.pbtn.sel{border-color:var(--accent);background:var(--accent-soft)}
+.pbtn.done{border-color:var(--good);background:var(--good-soft);cursor:default}
+.pbtn.miss{border-color:var(--bad);background:var(--bad-soft)}
+.pbtn small{display:block;color:var(--muted)}
+
+/* bars */
+.hbar{display:grid;grid-template-columns:minmax(0,11em) minmax(0,1fr) 7.5em;gap:10px;align-items:center;margin:6px 0;font-size:.92rem}
+.hbar .trk{position:relative;height:24px;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.hbar .zero{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.5}
+.hbar .fill{position:absolute;top:2px;bottom:2px;border-radius:4px;transition:all .4s}
+.hbar .v{font-family:"JetBrains Mono",monospace;text-align:right;font-variant-numeric:tabular-nums}
+
+/* cost lab */
+.matrix{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:4px;font-size:.92rem;margin:8px 0}
+.matrix div{padding:8px 10px;border-radius:8px;background:var(--paper)}
+.matrix .h{background:transparent;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;align-items:end}
+.matrix .ok{background:var(--good-soft)} .matrix .fn{background:var(--bad-soft)} .matrix .fp{background:var(--amber-soft)}
+.matrix b{font-family:"JetBrains Mono",monospace;font-size:1.1rem}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{font-family:"Source Sans 3",sans-serif}
+
+/* API */
+pre.json{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-family:"JetBrains Mono",monospace;font-size:.78rem;line-height:1.5;overflow-x:auto;margin:6px 0;white-space:pre}
+pre.json .k{color:var(--accent)} pre.json .s{color:var(--good)} pre.json .n{color:var(--amber)} pre.json .e{color:var(--bad)}
+.imgpick{display:flex;gap:8px;flex-wrap:wrap}
+.imgpick button{border:2px solid var(--line);background:var(--paper);border-radius:10px;padding:4px;cursor:pointer;width:118px}
+.imgpick button.on{border-color:var(--accent)}
+.imgpick svg{width:100%;height:auto;display:block}
+.imgpick span{display:block;font-size:.8rem;text-align:center}
+.switch{display:flex;align-items:center;gap:8px;font-size:.95rem;cursor:pointer}
+.svc{background:var(--paper2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.svc h3{font-size:1.05rem;margin:0 0 2px}
+.svc .sub{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.svc .opts{margin-top:6px}
+.keybox{background:var(--paper2);border:1px dashed var(--muted);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:.95rem}
+.keybox b.mono{font-size:1.05rem}
+
+/* how sure ranges */
+.rng{display:grid;grid-template-columns:minmax(0,7.5em) minmax(0,1fr);gap:10px;align-items:center;margin:14px 0}
+.rng .trk{position:relative;height:30px;background:var(--paper);border:1px solid var(--line);border-radius:6px}
+.rng .fill{position:absolute;top:4px;bottom:4px;border-radius:4px;opacity:.85;transition:all .35s}
+.rng .dot{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--ink);border:2px solid var(--paper);transition:left .35s}
+.rng .need{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1px;background:var(--bad);transition:left .35s}
+.rng .lab{font-size:.82rem;color:var(--muted);font-family:"JetBrains Mono",monospace}
+.axis{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);font-family:"JetBrains Mono",monospace}
+
+.weights .wrow{display:grid;grid-template-columns:minmax(0,12em) minmax(0,1fr) 3.5em;gap:10px;align-items:center;margin:4px 0;font-size:.93rem}
+.weights .wrow span:last-child{font-family:"JetBrains Mono",monospace;text-align:right}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal.show{display:flex}
+.modal .box{background:var(--paper);border-radius:16px;padding:26px 30px;max-width:560px;width:100%;box-shadow:var(--shadow)}
+#pickName{font-family:Fraunces,serif;font-size:clamp(2.4rem,7vw,4.4rem);text-align:center;margin:20px 0;color:var(--accent);min-height:1.3em}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin:10px 0}
+.slot{display:flex;align-items:center;gap:6px}
+.slot span{font-family:"JetBrains Mono",monospace;font-size:.8rem;color:var(--muted);min-width:22px;text-align:right}
+.slot input{flex:1;min-width:0}
+
+#notes{position:fixed;top:64px;right:12px;bottom:12px;width:350px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;display:none;z-index:15;font-size:.95rem}
+#notes.show{display:block}
+#notes h3{font-size:1rem;color:var(--amber)}
+#notes ul{padding-left:18px} #notes li{margin:5px 0}
+
+.wlines{display:flex;flex-direction:column;gap:4px;margin:6px 0 10px;max-width:760px}
+.wl{display:flex;align-items:flex-end;gap:10px}
+.wl span{font-family:Fraunces,serif;font-weight:700;color:var(--accent);min-width:1.4em}
+.wl input{flex:1;min-width:0;border:0;border-bottom:1.5px solid var(--muted);border-radius:0;background:transparent;padding:10px 2px 4px;font-size:1.05rem}
+.wl input:focus{outline:none;border-bottom-color:var(--accent)}
+.discuss{background:linear-gradient(135deg,var(--violet-soft),var(--paper))}
+.bigq{font-family:Fraunces,serif;font-size:clamp(1.5rem,3.4vw,2.4rem);line-height:1.25;margin:20px 0}
+
+@media (max-width:820px){
+  .page{padding:24px 16px 50px}
+  .grid2,.grid3,.pairs{grid-template-columns:1fr}
+  #stage{left:4px;right:4px} #stage.withnotes{right:4px}
+  #notes{width:auto;left:12px;top:auto;height:45vh}
+  #bar{overflow-x:auto} #bar .title{display:none}
+  .hide-sm{display:none}
+  .three{height:300px}
+  .projects{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .hbar{grid-template-columns:minmax(0,1fr) 6.5em}
+  .hbar .trk{grid-column:1 / -1;order:3}
+  .weights .wrow{grid-template-columns:minmax(0,1fr) 3.5em}
+  .weights .wrow input{grid-column:1 / -1;order:3}
+  .rng{grid-template-columns:1fr}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  #bar,#progress,#notes,.modal,.three{display:none!important}
+  #stage{position:static;perspective:none}
+  .slide{display:block!important;position:relative;box-shadow:none;page-break-after:always;animation:none!important;transform:none!important;overflow:visible}
+  .slide::before{display:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  :root,:root[data-theme="dark"]{--bg:#fff;--paper:#fff;--paper2:#f4f2ec;--ink:#111;--muted:#444;--line:#bbb;--accent:#1f5aa6;--accent-soft:#e3ebf7;--amber:#8a4d06;--amber-soft:#fbeedb;--good:#1f6b3f;--good-soft:#e2f2e7;--bad:#9b2a21;--bad-soft:#f8e3e0;--violet:#4a3c9a;--violet-soft:#ebe8f8;color-scheme:light}
+  html,body{height:auto}
+  .slide.sectiontitle{page-break-after:avoid;min-height:0}
+  .slide.sectiontitle .bignum{font-size:3rem}
+  .page{padding:18px 8px}
+  .noprint,.pnum,[data-pick],#gateNext,#gateReset,#drAdd,#drReset,#clBest,#apiSend,#mxReset,#hookShow,#bkCheck{display:none!important}
+  .card,.q,.matrix,.def,.do,.svc,.rng,svg.chart,tr,.hbar,.wl,.grid2>*,.grid3>*{break-inside:avoid}
+  .grid2{grid-template-columns:1fr}
+  .opt.mine::after{content:"  (your answer)";font-weight:700}
+  .opt.right:not(.mine)::after{content:"  (correct answer)";font-weight:700}
+  .pbtn.done::after{content:"  (matched)";font-weight:700}
+  body.print-one .slide{display:none!important}
+  body.print-one .slide.print-target{display:block!important;page-break-after:auto}
+  .worksheet .wl input{border-bottom:1px solid #000;color:#000;font-size:12pt;padding-top:14px}
+  .worksheet .do{background:none;border-left:3px solid #000}
+}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <div class="title">Unit 3 <span>· AI Tools and Implementation</span></div>
+  <button class="tb" id="bPrev" title="Previous page (Left arrow)">◀</button>
+  <div id="count">1 / 1</div>
+  <button class="tb" id="bNext" title="Next page (Right arrow)">▶</button>
+  <button class="tb hide-sm" id="bAgenda" title="Go to the agenda">Agenda</button>
+  <button class="tb" id="bPick" title="Pick a student (P)">Pick a student</button>
+  <button class="tb hide-sm" id="bNames" title="Edit the class list">Class list</button>
+  <button class="tb" id="bPrint" title="Print the whole lecture with your answers">Print</button>
+  <button class="tb" id="bTheme" title="Light or dark">◐</button>
+</div>
+<div id="progress"></div>
+
+<div id="stage">
+
+<!-- ============ COVER ============ -->
+<section class="slide cover" data-init="cover">
+ <div class="page">
+  <div class="kicker">Unit 3 · Week 3</div>
+  <h1>AI Tools and Implementation</h1>
+  <p class="lead">Why most AI projects fail, what the successful ones do differently, and how to test a cloud AI tool before you trust it.</p>
+  <div id="coverCanvas" class="three" style="height:280px;cursor:default"><div class="nogl">The 3D view needs an internet connection.</div></div>
+  <label class="f" for="stName" style="margin-top:14px">Your name (it prints on your copy of the lecture)</label>
+  <div class="wlines" style="max-width:420px;margin-top:0"><label class="wl"><span></span><input type="text" id="stName" aria-label="Your name"></label></div>
+  <p class="muted" style="margin-top:14px" id="coverWelcome">Welcome to class tonight:</p>
+  <div class="chips" id="coverNames"></div>
+ </div>
+</section>
+
+<!-- ============ AGENDA ============ -->
+<section class="slide" id="agendaSlide">
+ <div class="page">
+  <div class="kicker">Tonight</div>
+  <h2>Agenda</h2>
+  <ol class="agenda" id="agendaList">
+   <li data-go="hook"><div><b>Eight out of ten</b><br><span class="muted">Opening problem</span></div></li>
+   <li data-go="s1"><div><b>Why AI projects fail</b><br><span class="muted">Five root causes</span></div></li>
+   <li data-go="s2"><div><b>What successful projects do differently</b><br><span class="muted">Five principles, pilots, and the simple answer</span></div></li>
+   <li data-go="s3"><div><b>What does a wrong prediction cost?</b><br><span class="muted">False positives, false negatives, and choosing which to risk</span></div></li>
+   <li data-go="s4"><div><b>Implementation is a cycle</b><br><span class="muted">Six phases, decision gates, drift, and the Watson case</span></div></li>
+   <li data-go="s5"><div><b>The five parts of a working AI system</b><br><span class="muted">Data pipeline, model, inference, interface, monitoring</span></div></li>
+   <li data-go="s6"><div><b>Cloud AI: test, compare, or build</b><br><span class="muted">Two kinds of cloud AI service, scoring a read, how sure a small test can be, total cost, and buy, customize, or build</span></div></li>
+   <li data-go="close"><div><b>Back to the flight line question</b><br><span class="muted">Class discussion</span></div></li>
+   <li data-go="wrap"><div><b>Break, then the AI Lab Sprint</b><br><span class="muted">Group activity</span></div></li>
+  </ol>
+  <p class="muted">Select any line to jump to that part.</p>
+ </div>
+</section>
+
+<!-- ============ HOOK ============ -->
+<section class="slide" id="hook">
+ <div class="page">
+  <div class="kicker">Opening problem</div>
+  <h2>Eight out of ten</h2>
+  <p>Companies and governments spend billions of dollars on artificial intelligence (AI) projects every year. An <b>AI project</b> is the work of building or buying an AI system and putting it to use.</p>
+  <div class="do"><b>What you do:</b> First, move the slider to your guess: out of 10 AI projects, how many fail? Then pick the reason you think is most common. Select <b>Show the answer</b> when you have done both.</div>
+  <div class="grid2">
+   <div>
+    <label class="f" for="hookSlider">My guess: <span id="hookGuess">3</span> of 10 projects fail</label>
+    <input type="range" id="hookSlider" min="0" max="10" value="3">
+    <div class="projects" id="hookProjects"></div>
+   </div>
+   <div>
+    <div class="q" style="margin-top:0"><div class="qt">The most common reason AI projects fail:</div>
+     <div class="opts col" id="hookOpts">
+      <button class="opt" data-v="0">The model was not accurate enough</button>
+      <button class="opt" data-v="1">The code had bugs</button>
+      <button class="opt" data-v="2">Not enough computing power</button>
+      <button class="opt" data-v="3">Leaders misunderstood the problem AI was supposed to solve</button>
+     </div></div>
+    <button class="btn" id="hookShow">Show the answer</button>
+   </div>
+  </div>
+  <div class="why" id="hookWhy">
+   <div class="card" style="margin-top:14px">
+    <p style="margin-top:0" id="hookVerdict"></p>
+    <p><b>More than 8 of every 10 AI projects fail.</b> That is twice the failure rate of technology projects that do not involve AI.</p>
+    <p>In 2024, researchers at the RAND Corporation, a research organization that studies policy for the U.S. government, interviewed 65 experienced data scientists and engineers about why AI projects fall apart. <b>The most common answer was not bad code or a weak model.</b> It was leaders who misunderstood, or explained badly, what problem the AI was supposed to solve.</p>
+    <p style="margin-bottom:0">Tonight is about everything around the model: choosing the right problem, planning the work, testing the tools, and keeping the system honest after launch.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ THINK ABOUT THIS ============ -->
+<section class="slide discuss">
+ <div class="page">
+  <div class="kicker">Think about this through the lecture</div>
+  <div class="bigq">Your command has a budget and wants AI to predict which aircraft parts will fail before the next scheduled inspection. You have been asked for a recommendation.</div>
+  <p class="lead">What would you need to know before you say yes? What would make you say no?</p>
+  <p class="muted">Keep this question in mind during the lecture. We discuss it together at the end.</p>
+  <label class="f">My notes</label>
+  <div class="wlines"><label class="wl"><span></span><input type="text" id="nThink1" aria-label="Notes line 1"></label><label class="wl"><span></span><input type="text" id="nThink2" aria-label="Notes line 2"></label><label class="wl"><span></span><input type="text" id="nThink3" aria-label="Notes line 3"></label><label class="wl"><span></span><input type="text" id="nThink4" aria-label="Notes line 4"></label></div>
+ </div>
+</section>
+
+<!-- ============ KEY TERMS ============ -->
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Words we use tonight</div>
+  <h2>Key terms</h2>
+  <p>Every term on this list shows up in the lecture. Read them once now. The last six are the terms your Unit 3 project uses.</p>
+  <div class="tw"><table>
+   <tr><th style="width:22%">Term</th><th>Meaning</th><th style="width:32%">Example</th></tr>
+   <tr><td><b>Vendor</b></td><td>The company selling a product or service.</td><td>Amazon selling a service that reads text in images</td></tr>
+   <tr><td><b>Root cause</b></td><td>The underlying reason something failed, not the symptom you notice first.</td><td>The alert was late because the data arrived late</td></tr>
+   <tr><td><b>Pilot</b></td><td>A small test with real users, a success measure, and an end date.</td><td>One doctor's schedule for two months</td></tr>
+   <tr><td><b>False positive</b></td><td>The system raises an alarm about something that is fine. A false alarm.</td><td>A good aircraft part is pulled for inspection</td></tr>
+   <tr><td><b>False negative</b></td><td>The system misses something that is real. A miss.</td><td>A failing part stays on the aircraft</td></tr>
+   <tr><td><b>Decision gate</b></td><td>A planned point where someone with authority decides to continue, change course, or stop.</td><td>"Do we have the data we need? If not, stop here."</td></tr>
+   <tr><td><b>Drift</b></td><td>The slow loss of accuracy after launch, because the world changes and the model does not.</td><td>A bakery forecast that misses after a school opens next door</td></tr>
+   <tr><td><b>Inference</b></td><td>The moment a trained model makes a prediction on new data.</td><td>The forecast the baker reads at 4 a.m.</td></tr>
+   <tr><td><b>Data sovereignty</b></td><td>The rule that data is subject to the laws of the country where it is stored or processed.</td><td>Health records that must stay in approved locations</td></tr>
+   <tr><td><b>Vendor lock-in</b></td><td>Depending on one vendor so heavily that switching becomes slow and expensive.</td><td>All your data and staff training built around one cloud</td></tr>
+   <tr><td><b>Total cost of ownership</b></td><td>Everything a system costs over its life, not just the price list.</td><td>The service fee plus the staff time to check its results</td></tr>
+   <tr><td><b>Cloud AI service</b></td><td>A trained AI model a company rents out over the internet. You send data in and get answers back.</td><td>Amazon Rekognition reading the text in a photo</td></tr>
+   <tr><td><b>API (application programming interface)</b></td><td>A set of rules that lets one program ask another program to do a job and send back the result.</td><td>A program sends a photo to Rekognition and gets the text back</td></tr>
+   <tr><td><b>API key</b></td><td>A secret code that proves who is asking and which account gets the bill.</td><td>A long string of letters and numbers</td></tr>
+   <tr><td><b>JSON (JavaScript Object Notation)</b></td><td>A text format for data. Most APIs send their answers in it.</td><td><span class="mono">{"DetectedText": "$3.25", "Confidence": 99.1}</span></td></tr>
+   <tr><td><b>Task API</b></td><td>A cloud AI service built to do one job. It returns the same type of answer every time.</td><td>Rekognition's text detection returns each line of text it finds</td></tr>
+   <tr><td><b>GenAI model API</b></td><td>A cloud AI service that follows written instructions, called a prompt, and writes an answer.</td><td>Gemini, told "Reply with only the price"</td></tr>
+   <tr><td><b>Confidence score</b></td><td>A number from 0 to 100 that a service reports about its own answer. It is not a promise that the answer is right.</td><td>Rekognition reports 96.8 for a price it got wrong</td></tr>
+   <tr><td><b>Token</b></td><td>The unit Gemini uses to measure and charge for the text and images it handles.</td><td>One photo plus a short question uses a few hundred tokens</td></tr>
+   <tr><td><b>Hit rate</b></td><td>The number of images a service read correctly, out of the total.</td><td>11 correct out of 15</td></tr>
+  </table></div>
+ </div>
+</section>
+
+<!-- ============ SECTION 1 ============ -->
+<section class="slide sectiontitle" id="s1">
+ <div class="page"><div class="bignum">1</div><div class="kicker">Section 1</div><h2>Why AI projects fail</h2>
+ <p class="lead">RAND found five root causes behind most failed AI projects. Almost none of them are about the model.</p>
+ <p class="muted">Read them as a checklist. Any recommendation you write should show you checked all five.</p></div>
+</section>
+
+<section class="slide worksheet" id="listCauses" data-init="listcauses">
+ <div class="page">
+  <div class="kicker">Section 1 · Before you read on</div>
+  <h2>Why do you think AI projects fail?</h2>
+  <p>More than 8 of every 10 AI projects fail. RAND researchers found five root causes. Before we look at them together, write your own list.</p>
+  <div class="do"><b>What you do:</b> List as many reasons as you can think of. Aim for five. Then write the one you think is most common. Stay on this page. We compare your list with RAND's together.</div>
+  <div class="wlines">
+   <label class="wl"><span>1.</span><input type="text" id="lc1" aria-label="Reason 1"></label>
+   <label class="wl"><span>2.</span><input type="text" id="lc2" aria-label="Reason 2"></label>
+   <label class="wl"><span>3.</span><input type="text" id="lc3" aria-label="Reason 3"></label>
+   <label class="wl"><span>4.</span><input type="text" id="lc4" aria-label="Reason 4"></label>
+   <label class="wl"><span>5.</span><input type="text" id="lc5" aria-label="Reason 5"></label>
+  </div>
+  <label class="f" for="lcTop">The reason I think is most common</label>
+  <div class="wlines"><label class="wl"><span></span><input type="text" id="lcTop"></label></div>
+  <label class="f">My notes</label>
+  <div class="wlines">
+   <label class="wl"><span></span><input type="text" id="lcN1" aria-label="Notes line 1"></label>
+   <label class="wl"><span></span><input type="text" id="lcN2" aria-label="Notes line 2"></label>
+   <label class="wl"><span></span><input type="text" id="lcN3" aria-label="Notes line 3"></label>
+   <label class="wl"><span></span><input type="text" id="lcN4" aria-label="Notes line 4"></label>
+  </div>
+  <div class="row noprint"><button class="btn ghost" id="lcPrint">Print this page</button><span class="muted" style="font-size:.9rem">What you type saves on this laptop and prints with the page.</span></div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 1 · Root causes</div>
+  <h2>Five root causes</h2>
+  <div class="tw"><table>
+   <tr><th style="width:20%">Root cause</th><th>What it looks like</th><th style="width:36%">In a scenario</th></tr>
+   <tr><td><b>1. The wrong problem</b></td><td>Leaders misunderstand or explain badly what the AI is supposed to do. The team builds something accurate that nobody needs.</td><td>The clinic asks for no-show predictions, but its real problem is that patients cannot get through on the phone to reschedule.</td></tr>
+   <tr><td><b>2. Not enough good data</b></td><td>The data needed to train the model does not exist, is too messy, or does not match the real problem.</td><td>The school has reading test scores twice a year, too rarely to catch a student falling behind in October.</td></tr>
+   <tr><td><b>3. Chasing the technology</b></td><td>The team picks the newest tool because it is exciting, not because it fits.</td><td>The bakery is sold a GenAI chatbot when a simple sales forecast would do the job.</td></tr>
+   <tr><td><b>4. Weak infrastructure</b></td><td>The organization lacks the systems to move data, run the model, and keep it updated.</td><td>The flight line's maintenance records sit in three systems that do not connect.</td></tr>
+   <tr><td><b>5. A problem too hard for AI</b></td><td>The task needs judgment or information AI does not have yet.</td><td>Predicting a rare part failure that has happened only twice in ten years.</td></tr>
+  </table></div>
+  <p><b>The first cause is the most common and the cheapest to prevent.</b> Executives tend to overestimate AI. In a 2022 Gartner survey, 80 percent of executives said automation could be applied to any business decision. That belief produces expensive projects aimed at the wrong target.</p>
+  <div class="def"><b>"Not enough good data" does not mean you need a huge amount of data.</b> The word that matters is <i>good</i>: data that is accurate and matches the real problem. A small set of good data beats a mountain of messy data that answers the wrong question. How much is enough depends on the problem. We cover that in Unit 4.</div>
+ </div>
+</section>
+
+<section class="slide" data-init="sentence">
+ <div class="page">
+  <div class="kicker">Section 1 · Preventing root cause 1</div>
+  <h2>Name the problem before you choose any technology</h2>
+  <p>Root cause 1 is <b>the wrong problem</b>: the team builds something that works, and nobody needs it. You prevent it by naming the problem precisely, before you spend any money.</p>
+  <p>To name the problem, answer three questions:</p>
+  <ol style="margin-top:0">
+   <li><b>Who</b> will use the AI's answer?</li>
+   <li><b>What</b> will that person decide with it?</li>
+   <li><b>When</b> do they make that decision?</li>
+  </ol>
+  <p>Then they put the three answers into one sentence. If the team cannot agree on the answers, they do not yet know what problem they are solving. They settle that first.</p>
+  <div class="grid2">
+   <div class="card">
+    <h3>Weak</h3>
+    <p class="bad" style="font-size:1.1rem">"Use AI to improve aircraft maintenance."</p>
+    <p class="muted" style="margin-bottom:0">It answers none of the three questions. Nobody can tell what "improve" means, so nobody can tell whether the project worked.</p>
+   </div>
+   <div class="card">
+    <h3>Strong</h3>
+    <p class="good" style="font-size:1.1rem">"The AI will help the maintenance chief decide which parts to inspect early, each morning before the flight schedule is set."</p>
+    <ul style="margin:0;padding-left:20px;font-size:.95rem"><li><b>Who:</b> the maintenance chief</li><li><b>What:</b> which parts to inspect early</li><li><b>When:</b> each morning, before the flight schedule is set</li></ul>
+   </div>
+  </div>
+  <div class="do"><b>What you do:</b> Use the scenario you chose for your Unit 3 project, such as the bakery, the library, or the auto repair shop. The project's scenario table names your decision-maker. Answer the three questions in the boxes. Your sentence appears below the boxes.</div>
+  <div class="grid3">
+   <div><label class="f" for="sWho">Who makes the decision?</label><input type="text" id="sWho"></div>
+   <div><label class="f" for="sWhat">What do they decide?</label><input type="text" id="sWhat"></div>
+   <div><label class="f" for="sWhen">When?</label><input type="text" id="sWhen"></div>
+  </div>
+  <div class="card" style="margin-top:12px;font-size:1.1rem" id="sOut"></div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 1 · Check</div>
+  <h2>Check: Name the root cause</h2>
+  <p>Each project failed. Pick the root cause. Decide before you select.</p>
+  <div class="checkset" data-check="cause"></div>
+ </div>
+</section>
+
+<!-- ============ SECTION 2 ============ -->
+<section class="slide sectiontitle" id="s2">
+ <div class="page"><div class="bignum">2</div><div class="kicker">Section 2</div><h2>What successful projects do differently</h2>
+ <p class="lead">The same RAND researchers asked what separated the projects that worked. They found five principles. Each one is the mirror image of a root cause.</p></div>
+</section>
+
+<section class="slide" data-init="pairs">
+ <div class="page">
+  <div class="kicker">Section 2 · Five principles</div>
+  <h2>Match each root cause to the principle that prevents it</h2>
+  <div class="do"><b>What you do:</b> Select a root cause on the left. Then select the principle on the right that prevents it. A correct pair turns green. Match all five.</div>
+  <div class="pairs" id="pairBox"><div id="pairL"></div><div id="pairR"></div></div>
+  <p>Matched: <span class="score" id="pairScore">0 / 5</span></p>
+  <div class="why" id="pairMore">
+   <div class="tw"><table>
+    <tr><th style="width:28%">Principle</th><th>What to do</th></tr>
+    <tr><td><b>Make sure the builders understand the purpose</b></td><td>Put the people who will use the system in the room with the people who build it, from the first meeting to the last.</td></tr>
+    <tr><td><b>Choose enduring problems</b></td><td>RAND advises committing a team to one problem for at least a year. If a problem is not worth a year, it probably is not worth an AI project.</td></tr>
+    <tr><td><b>Focus on the problem, not the technology</b></td><td>Before choosing AI, ask what a spreadsheet, a checklist, or a simple rule would achieve.</td></tr>
+    <tr><td><b>Invest in infrastructure</b></td><td>Budget for data cleanup, pipelines, and monitoring, not just the model.</td></tr>
+    <tr><td><b>Understand AI's limits</b></td><td>Ask a technical expert, "Can this be done with the data we have?" before announcing the project.</td></tr>
+   </table></div>
+  </div>
+ </div>
+</section>
+
+<section class="slide" data-init="pilot">
+ <div class="page">
+  <div class="kicker">Section 2 · Two practices in every success</div>
+  <h2>Pair builders with experts. Start small.</h2>
+  <div class="grid2">
+   <div class="card"><h3>Pair builders with domain experts</h3>
+    <p>The people who build an AI system are usually <b>data scientists</b>. They know how to train a model. They usually do not know the work the model is for, such as how a crew maintains aircraft or how a clinic schedules patients. A <b>domain expert</b> is someone who does that work every day.</p>
+    <p>The domain expert knows which data can be trusted. A box on a maintenance form may look perfect for training. If mechanics fill it in quickly at the end of a shift, the data scientist sees clean numbers. The mechanic knows the numbers are guesses.</p>
+    <p style="margin-bottom:0">On the flight line, that person is a senior maintainer. At the clinic, the front desk staff. At the school, the reading teacher. At the bakery, the baker.</p></div>
+   <div class="card"><h3>Start small, then scale</h3>
+    <p>A <b>pilot</b> tests the system on a small scale before the whole organization pays for it. If the system does not work, the organization finds out after spending a little, on one schedule for two months, instead of a lot, across every clinic. A pilot that shows the system does not work is still a useful result. It stops a bad system before it reaches everyone.</p>
+    <p>A pilot has four parts:</p>
+    <ol style="margin:0;padding-left:20px"><li>A limited test</li><li>Real users</li><li>A clear success measure</li><li>A set end date</li></ol></div>
+  </div>
+  <div class="do"><b>What you do:</b> The clinic wrote three pilot plans for its no-show predictor. Pick the one that is a real pilot. The explanation shows what each plan is missing.</div>
+  <div class="opts col" id="pilotOpts">
+   <button class="opt" data-v="0"><b>Plan A.</b> Turn the predictor on in all 12 clinics next month and see how it goes.</button>
+   <button class="opt" data-v="1"><b>Plan B.</b> Use it on one doctor's schedule from December 1 to January 31. The front desk calls every patient it flags. Success means the no-show rate on that schedule drops from 18 percent to 14 percent or lower.</button>
+   <button class="opt" data-v="2"><b>Plan C.</b> Use it on one doctor's schedule until the vendor says it is working.</button>
+  </div>
+  <div class="why" id="pilotWhy"></div>
+ </div>
+</section>
+
+<section class="slide" data-init="bakery">
+ <div class="page">
+  <div class="kicker">Section 2 · Try the simple answer first</div>
+  <h2>The bakery does not need a chatbot</h2>
+  <p>Principle 3 is the one enthusiasts resist most. A local bakery throws away about <b>$1,200</b> of unsold bread every month, <b>$14,400</b> a year. The owner has three offers.</p>
+  <div class="tw"><table>
+   <tr><th>Option</th><th>What it is</th><th>Cost in year one</th><th>Cost each later year</th><th>Cuts waste by</th></tr>
+   <tr><td><b>A. GenAI assistant</b></td><td>A chatbot the owner asks "How much should I bake tomorrow?"</td><td>$30,000</td><td>$6,000</td><td>20%</td></tr>
+   <tr><td><b>B. Custom forecast</b></td><td>A vendor builds a machine learning model on the bakery's sales data.</td><td>$12,000</td><td>$3,000</td><td>60%</td></tr>
+   <tr><td><b>C. Spreadsheet</b></td><td>Average the sales for the same weekday over the last four weeks. Adjust for holidays and weather.</td><td>$600</td><td>$0</td><td>50%</td></tr>
+  </table></div>
+  <div class="grid2">
+   <div>
+    <div class="card"><h3>Here is the whole "model" for option C</h3>
+     <p style="margin-top:0">Sourdough loaves sold on the last four Tuesdays: <b class="mono">42, 38, 45, 39</b>.</p>
+     <div class="row" style="margin:0"><label for="bkGuess" style="font-weight:600">Bake this many next Tuesday:</label><input type="number" id="bkGuess" style="width:90px"><button class="btn" id="bkCheck">Check</button></div>
+     <p id="bkMsg" class="muted" style="margin-bottom:0"></p></div>
+   </div>
+   <div>
+    <div class="do" style="margin-top:0"><b>What you do:</b> Move the slider to see the total money each option saves or loses after 1 to 5 years. Then decide which option you would recommend, and why.</div>
+    <label class="f" for="bkYears">After <span id="bkY">1</span> year(s)</label>
+    <input type="range" id="bkYears" min="1" max="5" value="1">
+    <div id="bkBars"></div>
+    <p id="bkNote" class="muted" style="font-size:.93rem"></p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="slide discuss">
+ <div class="page">
+  <div class="kicker">Discussion · No answer on this page</div>
+  <div class="bigq">The superintendent of a school district reads in the news that the school district in the next town now gives every student an AI tutor. She wants an AI tutor in every one of her own schools by next month, so her district does not fall behind.</div>
+  <p class="lead">Which of the five principles does this plan break? What would you tell the superintendent to do instead?</p>
+  <p class="muted">A <b>superintendent</b> is the person in charge of a school district. An <b>AI tutor</b> is a program that answers students' questions and walks them through practice problems.</p>
+  <div class="card" style="margin:12px 0">
+   <h3>The five principles</h3>
+   <ol style="margin:0;padding-left:22px">
+    <li><b>Make sure the builders understand the purpose.</b> The people who will use the system work with the people who build it, from the first meeting to the last.</li>
+    <li><b>Choose enduring problems.</b> Commit a team to one problem for at least a year.</li>
+    <li><b>Focus on the problem, not the technology.</b> Try a spreadsheet, a checklist, or a simple rule first.</li>
+    <li><b>Invest in infrastructure.</b> Budget for data cleanup, systems that move data, and monitoring, not just the model.</li>
+    <li><b>Understand AI's limits.</b> Ask a technical expert whether it can be done with the data you have, before announcing the project.</li>
+   </ol>
+  </div>
+  <div class="row noprint"><button class="btn" data-pick>Pick a student</button></div>
+  <label class="f">My notes</label>
+  <div class="wlines"><label class="wl"><span></span><input type="text" id="nTutor1" aria-label="Notes line 1"></label><label class="wl"><span></span><input type="text" id="nTutor2" aria-label="Notes line 2"></label><label class="wl"><span></span><input type="text" id="nTutor3" aria-label="Notes line 3"></label><label class="wl"><span></span><input type="text" id="nTutor4" aria-label="Notes line 4"></label></div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 2 · Check</div>
+  <h2>Check: Principles in practice</h2>
+  <div class="checkset" data-check="principle"></div>
+ </div>
+</section>
+
+<!-- ============ SECTION 3 ============ -->
+<section class="slide sectiontitle" id="s3">
+ <div class="page"><div class="bignum">3</div><div class="kicker">Section 3</div><h2>What does a wrong prediction cost?</h2>
+ <p class="lead">Your first question is not "Which vendor?" It is "What does a wrong prediction cost?"</p>
+ <p class="muted">Every prediction system makes two kinds of mistakes, and they almost never cost the same.</p></div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 3 · Two kinds of mistakes</div>
+  <h2>Misses and false alarms</h2>
+  <div class="grid2">
+   <div>
+    <p>A prediction system says yes or no: this part will fail, this patient will miss, this student is falling behind. Reality also says yes or no. That makes four outcomes.</p>
+    <div class="matrix" style="max-width:520px">
+     <div class="h"></div><div class="h">Reality: yes</div><div class="h">Reality: no</div>
+     <div class="h">System says yes</div><div class="ok"><b>Correct alert</b><br>True positive</div><div class="fp"><b>False alarm</b><br>False positive</div>
+     <div class="h">System says no</div><div class="fn"><b>Miss</b><br>False negative</div><div class="ok"><b>Correct pass</b><br>True negative</div>
+    </div>
+   </div>
+   <div class="tw"><table>
+    <tr><th>Scenario</th><th>False negative (a miss)</th><th>False positive (a false alarm)</th></tr>
+    <tr><td><b>Flight line</b></td><td>A failing part stays on the aircraft. A mission can be grounded, or worse.</td><td>A good part is pulled and replaced. It costs money and time.</td></tr>
+    <tr><td><b>Clinic</b></td><td>A no-show is not predicted. A doctor sits idle.</td><td>A patient who would have come is double-booked or called too often.</td></tr>
+    <tr><td><b>School</b></td><td>A struggling reader is not flagged and falls further behind.</td><td>A child who was fine is labeled and pulled from class.</td></tr>
+    <tr><td><b>Bakery</b></td><td>Demand is underestimated. Shelves are empty by noon.</td><td>Demand is overestimated. Bread goes in the trash.</td></tr>
+   </table></div>
+  </div>
+  <div class="def"><b>Your recommendation must say which error you would rather risk, and why.</b> On the flight line a miss is far worse than a false alarm, so the system should lean toward flagging. At the school a false flag has a human cost too, so a teacher should review every flag before acting.</div>
+ </div>
+</section>
+
+<section class="slide" data-init="costlab">
+ <div class="page">
+  <div class="kicker">Section 3 · Cost lab</div>
+  <h2>Find the cheapest alert setting</h2>
+  <p>A model gives every part, or every appointment, a <b>risk score</b> from 0 to 100. Someone must choose the <b>cutoff</b>: anything with a score at or above it gets flagged. A low cutoff flags more, so it catches more real problems and raises more false alarms. A high cutoff does the opposite.</p>
+  <div class="tabs" id="clTabs"><button class="tab on" data-s="flight">Flight line</button><button class="tab" data-s="clinic">Clinic</button></div>
+  <div class="do"><b>What you do:</b> For each scenario, move the cutoff slider and watch the total cost. Find the cutoff with the lowest total cost and write it down. Then switch scenarios and do it again. Compare the two cutoffs.</div>
+  <div class="grid2">
+   <div>
+    <p id="clSetup" style="margin-top:0"></p>
+    <label class="f" for="clCut">Flag everything with a risk score of <span id="clCutV" class="mono">50</span> or higher</label>
+    <input type="range" id="clCut" min="0" max="100" value="50">
+    <div class="matrix" id="clMatrix"></div>
+   </div>
+   <div>
+    <div class="card" id="clCost"></div>
+    <svg class="chart" id="clChart" viewBox="0 0 480 220" aria-label="Total cost at every cutoff"></svg>
+    <div class="row"><button class="btn ghost" id="clBest">Show the lowest-cost cutoff</button></div>
+    <p id="clMsg" class="muted" style="font-size:.95rem"></p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 3 · Check</div>
+  <h2>Check: Name the mistake</h2>
+  <div class="checkset" data-check="error"></div>
+ </div>
+</section>
+
+<!-- ============ SECTION 4 ============ -->
+<section class="slide sectiontitle" id="s4">
+ <div class="page"><div class="bignum">4</div><div class="kicker">Section 4</div><h2>Implementation is a cycle</h2>
+ <p class="lead">Launch is not the finish line. It is the start of monitoring.</p>
+ <p class="muted">An <b>implementation framework</b> is a structured plan for taking an AI idea from a problem to a working system. You met CRISP-DM (Cross-Industry Standard Process for Data Mining) and the AI Canvas in Unit 1, and the NIST AI Risk Management Framework in Unit 2. Every good framework forces the same questions.</p></div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 4 · The lifecycle</div>
+  <h2>Six phases that loop</h2>
+  <div class="tw"><table>
+   <tr><th style="width:20%">Phase</th><th>What happens</th><th style="width:34%">Where projects break</th></tr>
+   <tr><td><b>1. Define the problem</b></td><td>Name the decision, the users, the success measure, and the cost of each error.</td><td>Skipped or rushed. Root cause 1.</td></tr>
+   <tr><td><b>2. Assess the data</b></td><td>Find the data, check its quality, and confirm you are allowed to use it.</td><td>Data turns out to be missing, messy, or off-limits.</td></tr>
+   <tr><td><b>3. Build or buy</b></td><td>Choose a pre-built service, customize one, or build your own model.</td><td>The tool is chosen before the problem is clear.</td></tr>
+   <tr><td><b>4. Test</b></td><td>Check accuracy on data the model has not seen, and check results for each group of people affected.</td><td>Only overall accuracy is reported. Weak spots stay hidden.</td></tr>
+   <tr><td><b>5. Deploy</b></td><td>Put predictions in front of the people who act on them, with training and a human check.</td><td>The output lands on a screen nobody looks at.</td></tr>
+   <tr><td><b>6. Monitor and improve</b></td><td>Watch accuracy over time, catch drift, retrain, or retire the system.</td><td>Nobody owns the system after launch.</td></tr>
+  </table></div>
+  <div class="def"><b>Decision gates.</b> Well-run projects put a gate at the end of the key phases: a planned point where someone with authority decides to <b>continue</b>, <b>change course</b>, or <b>stop</b>. Gates make stopping a normal, planned outcome instead of an embarrassing failure.</div>
+ </div>
+</section>
+
+<section class="slide" data-init="gates">
+ <div class="page">
+  <div class="kicker">Section 4 · Gate review · 3D</div>
+  <h2>Run the clinic project through the gates</h2>
+  <p>The clinic is building its no-show predictor. At each gate you are the person with authority. Read what the team reports, then decide.</p>
+  <div class="grid2">
+   <div>
+    <div id="gateView" class="three"><div class="hint">Drag to rotate</div><div class="nogl">The 3D view needs an internet connection.</div></div>
+    <p class="muted" style="font-size:.88rem;margin-top:6px">The ring is the lifecycle. Bars across the ring are decision gates. A gate turns green when you choose continue, and amber or red when you choose change course or stop.</p>
+   </div>
+   <div>
+    <div class="do" style="margin-top:0"><b>What you do:</b> Read the report at this gate. Choose continue, change course, or stop. Read the feedback, then select <b>Go to the next gate</b>.</div>
+    <div class="card" id="gateCard"></div>
+    <div class="row"><button class="btn" id="gateNext" disabled>Go to the next gate</button><button class="btn ghost" id="gateReset">Start over</button><span class="score" id="gateScore"></span></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="slide" data-init="drift">
+ <div class="page">
+  <div class="kicker">Section 4 · Drift</div>
+  <h2>The bakery's model stops working</h2>
+  <p>The bakery's morning pastry forecast worked well for a year. The baker bakes what the forecast says. In month 13, a school opens next door. Parents start buying pastries on the way to drop-off. The model learned from a year of sales before the school existed, so it keeps predicting the old pattern. Every pastry the forecast leaves out is a customer who finds an empty shelf.</p>
+  <p><b>Monitoring</b> means the system checks its own forecast against what actually sold, every day. If the error goes above 15 percent, it sends the owner an alert. The owner can then retrain the model on the new sales.</p>
+  <div class="do"><b>What you do:</b> Run the bakery twice. First, with <b>Run 1: No monitoring</b> selected, select <b>Add a month</b> until you reach month 18. Then select <b>Run 2: Monitoring on</b> and do the same. Compare the red bars on the chart and the two rows of the table.</div>
+  <div class="tabs" id="drTabs"><button class="tab on" data-m="0">Run 1: No monitoring</button><button class="tab" data-m="1">Run 2: Monitoring on</button></div>
+  <div class="row"><button class="btn" id="drAdd">Add a month</button><button class="btn ghost" id="drReset">Start this run over</button></div>
+  <svg class="chart" id="drChart" viewBox="0 0 720 270" aria-label="Forecast and actual pastry sales by month"></svg>
+  <div class="card" id="drMsg"></div>
+  <div class="tw"><table id="drTable" style="margin-top:12px"></table></div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 4 · Who is responsible</div>
+  <h2>Every phase needs a person in charge</h2>
+  <p>Each phase of the lifecycle needs a specific person who is responsible for getting it done. "The team will handle it" is not enough. When no one is responsible for a job, nobody does it. An AI project usually has these five roles.</p>
+  <div class="tw"><table>
+   <tr><th style="width:24%">Role</th><th>What they do</th><th style="width:30%">At the clinic</th></tr>
+   <tr><td><b>Project sponsor</b></td><td>Funds the work and makes the gate decisions.</td><td>The clinic director</td></tr>
+   <tr><td><b>Domain experts</b></td><td>Know the work the AI supports and which data can be trusted.</td><td>Front desk staff and a nurse</td></tr>
+   <tr><td><b>Data specialists</b></td><td>Find, clean, and prepare the data.</td><td>The clinic's records analyst</td></tr>
+   <tr><td><b>Builders</b></td><td>Train or configure the model.</td><td>The vendor's team</td></tr>
+   <tr><td><b>Operations owner</b></td><td>Runs and monitors the system after launch.</td><td>The front desk supervisor</td></tr>
+  </table></div>
+  <p>In a small organization like the bakery, one person may fill several roles. The role most often left empty is the <b>operations owner</b>, the person who watches the system after launch (phase 6). Once the system is running, everyone moves on to other work. If nobody has the job of checking it, the system can get worse for months before anyone notices, the way the bakery's forecast did.</p>
+ </div>
+</section>
+
+<section class="slide" data-init="watson">
+ <div class="page">
+  <div class="kicker">Section 4 · Case study</div>
+  <h2>Watson for Oncology</h2>
+  <p><b>Oncology</b> is the branch of medicine that treats cancer. In 2011, IBM's Watson computer beat human champions on the TV quiz show <i>Jeopardy!</i> IBM set out to turn it into a doctor's assistant.</p>
+  <div class="do"><b>What you do:</b> Select each year to read what happened. Then answer the question below: when should someone have stopped the project?</div>
+  <div class="tabs" id="wTabs"></div>
+  <div class="card" id="wBody" style="min-height:130px"></div>
+  <div class="q"><div class="qt">When should someone with authority have stopped Watson for Oncology?</div>
+   <div class="opts col" id="wOpts">
+    <button class="opt" data-v="0">At the first gates: when the goal was to replace expert cancer judgment, and real patient data was not available for training</button>
+    <button class="opt" data-v="1">In 2017, after the University of Texas audit</button>
+    <button class="opt" data-v="2">In 2018, after doctors' complaints became public</button>
+    <button class="opt" data-v="3">Never. It needed more time and more money.</button>
+   </div>
+   <div class="why" id="wWhy"></div></div>
+  <div class="why" id="wTable">
+   <div class="tw"><table>
+    <tr><th style="width:24%">Lifecycle phase</th><th>What went wrong</th></tr>
+    <tr><td><b>1. Define the problem</b></td><td>The goal, replacing expert judgment on cancer treatment, was far beyond what the technology could do. That is root cause 5.</td></tr>
+    <tr><td><b>2. Assess the data</b></td><td>Real patient data was hard to get, so the system trained largely on invented cases. The data did not match the real problem.</td></tr>
+    <tr><td><b>4. Test</b></td><td>Recommendations reflected one hospital's preferences and were not tested widely before being sold to others.</td></tr>
+    <tr><td><b>5. Deploy</b></td><td>Hospitals in other countries, with different patients, drugs, and guidelines, got advice built for a New York hospital.</td></tr>
+    <tr><td><b>6. Monitor</b></td><td>Warnings from doctors did not stop sales. Nobody with authority stopped it early.</td></tr>
+   </table></div>
+   <div class="def"><b>The lesson reaches beyond medicine.</b> In high-stakes decisions, AI should support qualified people, not replace their judgment. Watson was marketed as a replacement and could not even deliver reliable support.</div>
+  </div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 4 · Check</div>
+  <h2>Check: The lifecycle</h2>
+  <div class="checkset" data-check="cycle"></div>
+ </div>
+</section>
+
+<!-- ============ SECTION 5 ============ -->
+<section class="slide sectiontitle" id="s5">
+ <div class="page"><div class="bignum">5</div><div class="kicker">Section 5</div><h2>The five parts of a working AI system</h2>
+ <p class="lead">Every working AI system has five connected parts. A weak one breaks the whole thing.</p>
+ <p class="muted">You do not need to build these parts. You do need to spot when one of them is the weak link.</p></div>
+</section>
+
+<section class="slide" data-init="pipe">
+ <div class="page">
+  <div class="kicker">Section 5 · The five parts · 3D</div>
+  <h2>Break one part and watch what happens</h2>
+  <div class="tw"><table style="font-size:.9rem">
+   <tr><th style="width:18%">Part</th><th>What it does</th><th style="width:36%">Question to ask</th></tr>
+   <tr><td><b>1. Data pipeline</b></td><td>Moves data from where it is collected to where the model uses it, cleaning and organizing it along the way.</td><td>Where does the data live, and how does it get to the model?</td></tr>
+   <tr><td><b>2. Model</b></td><td>The trained system that turns inputs into predictions.</td><td>What prediction would actually help?</td></tr>
+   <tr><td><b>3. Inference</b></td><td>The moment the model makes a prediction on new data, in batches or in real time.</td><td>Does the prediction need to arrive in seconds or by morning?</td></tr>
+   <tr><td><b>4. Interface</b></td><td>The screen, report, or alert that puts the prediction in front of a person.</td><td>Who acts on it?</td></tr>
+   <tr><td><b>5. Monitoring</b></td><td>Watches the live system for drift, errors, and unfair results.</td><td>Who notices when it starts getting things wrong?</td></tr>
+  </table></div>
+  <div class="grid2">
+   <div id="pipeView" class="three"><div class="hint">Drag to rotate</div><div class="nogl">The 3D view needs an internet connection.</div></div>
+   <div>
+    <div class="do" style="margin-top:0"><b>What you do:</b> This is the flight line's part-failure system. Blue dots are maintenance records. Amber dots are predictions. Select each part to break it, and read what goes wrong. Select <b>Fix everything</b> between tries.</div>
+    <div class="row" id="pipeBtns"></div>
+    <div class="card" id="pipeMsg" style="font-size:.97rem"></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="slide" data-init="timing">
+ <div class="page">
+  <div class="kicker">Section 5 · Inference timing</div>
+  <h2>Batch or real time?</h2>
+  <div class="grid2">
+   <div class="card"><h3>Batch</h3><p style="margin-bottom:0">The model makes many predictions at once on a schedule, such as overnight. The bakery's forecast runs at 2 a.m. and is ready when the baker arrives at 4 a.m. Cheaper and simpler to run.</p></div>
+   <div class="card"><h3>Real time</h3><p style="margin-bottom:0">The model answers each request the moment it arrives. A credit card fraud check has to answer in a fraction of a second while you stand at the register. Costs more and is harder to run.</p></div>
+  </div>
+  <div class="def"><b>Do not pay for speed you do not need.</b> Ask how soon a person must act on the prediction.</div>
+  <div class="do"><b>What you do:</b> Sort each system. Select the timing you think fits.</div>
+  <div id="timeItems"></div>
+  <p>Score: <span class="score" id="timeScore">0 / 6</span></p>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 5 · Monitoring</div>
+  <h2>What monitoring watches</h2>
+  <div class="tw"><table>
+   <tr><th style="width:24%">Signal</th><th>What it tells you</th></tr>
+   <tr><td><b>Accuracy over time</b></td><td>Whether predictions still match what actually happens. A slow decline is drift.</td></tr>
+   <tr><td><b>Changes in the input data</b></td><td>Whether today's data looks different from the training data. An early warning of drift.</td></tr>
+   <tr><td><b>Results by group</b></td><td>Whether errors fall more heavily on one group of people. The bias problem from Unit 2.</td></tr>
+   <tr><td><b>Overrides</b></td><td>How often people ignore or reverse the prediction. A rising rate means users have stopped trusting it, often for good reason.</td></tr>
+   <tr><td><b>Cost and speed</b></td><td>Whether the system is getting slower or more expensive as use grows.</td></tr>
+  </table></div>
+  <div class="card"><h3>Common data problems in the pipeline</h3>
+   <ul style="margin:0;padding-left:20px">
+    <li><b>Missing values:</b> half the clinic's records have no phone number, so reminder texts cannot be sent.</li>
+    <li><b>Inconsistent entries:</b> the flight line logs the same part as "hyd pump," "hydraulic pump," and "HP-2."</li>
+    <li><b>Unreliable entries:</b> a box on a form that looks useful was filled in carelessly because nobody ever checked it.</li>
+    <li><b>Old data:</b> the bakery's data is all from before the office building opened across the street.</li>
+    <li><b>Data you cannot legally use:</b> student records collected for grading may not be approved for a prediction system.</li></ul></div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 5 · Check</div>
+  <h2>Check: Find the weak part</h2>
+  <div class="checkset" data-check="parts"></div>
+ </div>
+</section>
+
+<!-- ============ SECTION 6 ============ -->
+<section class="slide sectiontitle" id="s6">
+ <div class="page"><div class="bignum">6</div><div class="kicker">Section 6</div><h2>Cloud AI: test, compare, or build</h2>
+ <p class="lead">You do not need to build a model to use one. Amazon, Microsoft, and Google rent out trained AI you can put to work in an afternoon.</p>
+ <p class="muted">The vendor shows you examples that work. Before you recommend a service, you test it on your own examples. That is your Unit 3 project.</p></div>
+</section>
+
+<section class="slide" data-init="api">
+ <div class="page">
+  <div class="kicker">Section 6 · Two kinds of cloud AI service</div>
+  <h2>Send one photo to both services</h2>
+  <p>Every API call has three parts. The <b>API key</b> proves who is asking and which account gets the bill. The <b>request</b> carries your photo and what you want done with it. The <b>response</b> comes back in the same layout every time, usually JSON, so a program knows where to find each part.</p>
+  <div class="grid2">
+   <div class="card"><h3>Amazon Rekognition: a task API</h3><p style="margin:0">It does one job. It finds every line of text in the photo and returns each one with a <b>confidence score</b> from 0 to 100. You cannot tell it which text you care about.</p></div>
+   <div class="card"><h3>Gemini: a GenAI model API</h3><p style="margin:0">It follows a written instruction, the <b>prompt</b>, and writes an answer. It reports how many <b>tokens</b> it used, which sets the price. It reports no confidence score.</p></div>
+  </div>
+  <div class="def"><b>The scoring rule from your project.</b> A read is correct only if every letter, number, and symbol matches the answer key. Capital letters and extra spaces don't count. Everything else does.</div>
+  <div class="do"><b>What you do:</b> Pick a photo and read its answer key. Select <b>Send to both services</b>. For each service, decide whether the read is correct under the scoring rule, then select <b>Correct</b> or <b>Wrong</b>. Do all three photos. Then turn off the API key and send once more.</div>
+  <div class="grid2">
+   <div>
+    <div class="imgpick" id="apiImgs"></div>
+    <div class="keybox" id="apiKeyText"></div>
+    <div class="row"><label class="switch"><input type="checkbox" id="apiKey" checked> Include the API key</label><button class="btn" id="apiSend">Send to both services</button></div>
+    <div class="muted" style="font-size:.85rem">Request sent to Gemini. The prompt is the same for every photo. Rekognition gets only the photo.</div>
+    <pre class="json" id="apiReq"></pre>
+    <p>Your scoring so far: <span class="score" id="apiScore">0 of 6 reads scored correctly</span></p>
+   </div>
+   <div>
+    <div class="svc"><h3>Rekognition response</h3><div class="sub">Lines of text found, each with a confidence score</div><pre class="json" id="apiResR"></pre><div class="opts" id="apiScR"></div><div class="why" id="apiWhyR"></div></div>
+    <div class="svc"><h3>Gemini response</h3><div class="sub">The answer it wrote, and the tokens used</div><pre class="json" id="apiResG"></pre><div class="opts" id="apiScG"></div><div class="why" id="apiWhyG"></div></div>
+   </div>
+  </div>
+  <div class="trymsg" id="apiMsg"></div>
+  <p class="muted" style="font-size:.88rem">This page simulates the responses so it works without an internet connection. The layouts follow Amazon Rekognition's text detection and the Gemini API, shortened to fit. In your Unit 3 project you send your own photos to the real services.</p>
+ </div>
+</section>
+
+<section class="slide" data-init="range">
+ <div class="page">
+  <div class="kicker">Section 6 · How sure can you be?</div>
+  <h2>Fifteen photos is a small test</h2>
+  <p>Your project tests each service on 15 photos. That gives a rough answer, not a final one. A service that reads 13 of 15 correctly could have a real hit rate anywhere from about 62 to 96 percent on thousands of photos. Your project gives you a table of these <b>plausible ranges</b>. This page draws them as bars.</p>
+  <div class="do"><b>What you do:</b> Select each <b>Try it</b> button in order. For each one, answer two questions in your head before you read the verdict. Do the two bars overlap? Does the left end of the better bar reach the red line, the hit rate the decision-maker needs? Then set the sliders yourself.</div>
+  <div class="grid2">
+   <div class="card">
+    <label class="f" for="rgR">Rekognition: <span id="rgRv" class="mono">13</span> of 15 correct</label>
+    <input type="range" id="rgR" min="7" max="15" value="13">
+    <label class="f" for="rgG">Gemini: <span id="rgGv" class="mono">11</span> of 15 correct</label>
+    <input type="range" id="rgG" min="7" max="15" value="11">
+    <label class="f" for="rgN">The decision-maker needs a hit rate of <span id="rgNv" class="mono">90</span> percent</label>
+    <input type="range" id="rgN" min="50" max="99" value="90">
+    <div class="tries" id="rgTries"></div>
+    <div class="trymsg" id="rgMsg"></div>
+   </div>
+   <div>
+    <div id="rgBars"></div>
+    <div class="rng" style="margin:0"><div></div><div class="axis"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>
+    <p class="muted" style="font-size:.85rem;margin-top:8px">Each bar is a plausible range for the real hit rate. The dot is the score on 15 photos. The red line is the hit rate the decision-maker needs.</p>
+    <div class="card" id="rgVerdict"></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="slide" data-init="names3">
+ <div class="page">
+  <div class="kicker">Section 6 · Same services, different names</div>
+  <h2>Learn the services by what they do</h2>
+  <p>All three big vendors sell the same core services under different names. Vendor websites rarely use plain words like "reads text in images," and vendors rename products often. Microsoft's services were called Cognitive Services, then Azure AI Services, and since late 2025, Foundry Tools.</p>
+  <div class="do"><b>What you do:</b> For each product name, pick what it does.</div>
+  <div id="svcItems"></div>
+  <p>Score: <span class="score" id="svcScore">0 / 9</span></p>
+  <div class="why" id="svcTable"><div class="tw"><table>
+   <tr><th>What it does</th><th>Amazon Web Services (AWS)</th><th>Microsoft</th><th>Google Cloud</th></tr>
+   <tr><td><b>Reads images, including the text in them</b></td><td>Amazon Rekognition</td><td>Azure Vision in Foundry Tools</td><td>Cloud Vision</td></tr>
+   <tr><td><b>Reads text</b></td><td>Amazon Comprehend</td><td>Azure Language in Foundry Tools</td><td>Cloud Natural Language</td></tr>
+   <tr><td><b>Turns speech into text</b></td><td>Amazon Transcribe</td><td>Azure Speech in Foundry Tools</td><td>Speech-to-Text</td></tr>
+  </table></div>
+  <p>Every service in this table is a task API. Gemini is a different kind: a GenAI model API that can do many of these jobs if you write the right prompt.</p>
+  <p class="muted">For government work, Amazon and Microsoft each run separate government clouds with stricter security rules: AWS GovCloud and Azure Government.</p></div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 6 · What renting costs besides money</div>
+  <h2>Your data leaves your control</h2>
+  <div class="grid2">
+   <div class="card"><h3>Data sovereignty</h3><p style="margin-bottom:0">When you use a cloud service, your data may be processed in another country. Laws about personal data differ from country to country, and some data, such as health records, student records, and government information, must stay in approved locations. That matters for anyone living and working overseas.</p></div>
+   <div class="card"><h3>Vendor lock-in</h3><p style="margin-bottom:0">Once your systems, data, and staff skills depend on one provider, switching gets slow and expensive. The vendor can raise prices, change the model, or retire the service, and you have little choice but to adjust.</p></div>
+  </div>
+  <h3 style="margin-top:16px">Approvals you should recognize</h3>
+  <div class="tw"><table>
+   <tr><th style="width:22%">Data type</th><th style="width:30%">Rule</th><th>What to look for in a platform</th></tr>
+   <tr><td>Patient health information</td><td>HIPAA (Health Insurance Portability and Accountability Act)</td><td>The vendor will sign a Business Associate Agreement (BAA), a contract accepting legal responsibility for protecting the data.</td></tr>
+   <tr><td>Student education records</td><td>FERPA (Family Educational Rights and Privacy Act)</td><td>Contract terms limiting how the vendor may use student data.</td></tr>
+   <tr><td>U.S. federal government data</td><td>FedRAMP (Federal Risk and Authorization Management Program)</td><td>A FedRAMP authorization at the level your agency requires.</td></tr>
+   <tr><td>Defense data</td><td>DoD (Department of Defense) Impact Levels</td><td>Authorization at the required level, often in a separate government region of the cloud.</td></tr>
+   <tr><td>Personal data of people in the European Union</td><td>GDPR (General Data Protection Regulation)</td><td>Data processing terms and European Union data storage options.</td></tr>
+  </table></div>
+ </div>
+</section>
+
+<section class="slide" data-init="matrix">
+ <div class="page">
+  <div class="kicker">Section 6 · Comparing platforms</div>
+  <h2>The weighted decision matrix</h2>
+  <p>A <b>weighted decision matrix</b> turns a comparison of several criteria into a choice you can defend. First, remove any platform that fails a <b>must-have</b>, such as a required compliance approval. Then weight the remaining criteria by how much they matter, score each platform from 1 to 5, multiply, and add.</p>
+  <p>The clinic confirmed that both platforms will sign a BAA. Now it compares them.</p>
+  <div class="do"><b>What you do:</b> The scores are fixed. You set the weights. First, read which platform wins with the clinic's weights. Then change the weights until <b>Platform A</b> wins. Ask yourself what the clinic would have to care about for A to be the right choice.</div>
+  <div class="grid2">
+   <div class="weights" id="mxWeights"></div>
+   <div>
+    <div class="tw"><table id="mxTable" style="font-size:.9rem"></table></div>
+    <div class="card" id="mxMsg"></div>
+    <div class="row"><button class="btn ghost" id="mxReset">Back to the clinic's weights</button></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="slide" data-init="tco">
+ <div class="page">
+  <div class="kicker">Section 6 · The real cost</div>
+  <h2>The price list is the smallest number</h2>
+  <p><b>Total cost of ownership</b> includes preparing data, staff time to set up and run the system, training users, monitoring, retraining when the model drifts, and the cost of switching if you ever leave.</p>
+  <p>Vendors charge in different units. Rekognition charges <b>per image</b>. Gemini charges <b>per token</b>, so you multiply the tokens one photo uses by the number of photos. Your project prices both. This page uses a per-image price.</p>
+  <div class="do"><b>What you do:</b> The flight line wants an image service to check 40,000 part photos a month. Select each <b>Try it</b> button in order and watch the year-one cost. Then change the numbers yourself.</div>
+  <div class="grid2">
+   <div class="card">
+    <div class="grid2" style="gap:8px 14px">
+     <div><label class="f" for="tImg">Photos per month</label><input type="number" id="tImg" value="40000" style="width:100%"></div>
+     <div><label class="f" for="tPrice">Price per 1,000 photos ($)</label><input type="number" id="tPrice" value="1.5" step="0.1" style="width:100%"></div>
+     <div><label class="f" for="tHrs">Staff hours per week checking results</label><input type="number" id="tHrs" value="0" style="width:100%"></div>
+     <div><label class="f" for="tRate">Staff cost per hour ($)</label><input type="number" id="tRate" value="45" style="width:100%"></div>
+     <div><label class="f" for="tSetup">Setup and data preparation ($)</label><input type="number" id="tSetup" value="0" style="width:100%"></div>
+     <div><label class="f" for="tMon">Monitoring and retraining per year ($)</label><input type="number" id="tMon" value="0" style="width:100%"></div>
+    </div>
+    <div class="tries" id="tTries"></div>
+    <div class="trymsg" id="tMsg"></div>
+   </div>
+   <div><div id="tBars"></div><div class="card" id="tTotal" style="margin-top:10px"></div></div>
+  </div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 6 · Build</div>
+  <h2>Buy, customize, or build</h2>
+  <p>No vendor has trained a model on your squadron's maintenance history, your clinic's appointment book, or your bakery's sales. For a problem that specific, you need a <b>development platform</b>: a cloud environment where you prepare your own data, train a model, and put it to work.</p>
+  <div class="tw"><table>
+   <tr><th style="width:14%">Approach</th><th>What it means</th><th>Best when</th><th>Watch out for</th></tr>
+   <tr><td><b>Buy</b></td><td>Use a pre-built service as is.</td><td>The task is common: reading text, labeling images, transcribing speech.</td><td>It cannot learn your situation. Your data leaves your control.</td></tr>
+   <tr><td><b>Customize</b></td><td>Start with a pre-built service and train it further on your own examples.</td><td>The task is common but your data is special, such as your own part types.</td><td>You need good labeled examples. Some lock-in remains.</td></tr>
+   <tr><td><b>Build</b></td><td>Train your own model on a development platform.</td><td>The problem is specific to your organization and the data is yours.</td><td>Takes time, skills, and ongoing maintenance. You own every failure.</td></tr>
+  </table></div>
+  <div class="grid2">
+   <div class="card"><h3>Development platforms</h3><ul style="margin:0;padding-left:20px"><li>Amazon: SageMaker AI</li><li>Microsoft: Azure Machine Learning, within Microsoft Foundry</li><li>Google: Gemini Enterprise Agent Platform (called Vertex AI until 2026)</li></ul></div>
+   <div class="card"><h3>AutoML and its tradeoff</h3><p style="margin:0"><b>AutoML</b> (automated machine learning) tries many candidate models and returns the best one, so a small team can build a working model in days. The tradeoff: fast to build, hard to explain. If your model grounds an aircraft or flags a seven-year-old as a struggling reader, someone will ask why.</p></div>
+  </div>
+ </div>
+</section>
+
+<section class="slide">
+ <div class="page">
+  <div class="kicker">Section 6 · Check</div>
+  <h2>Check: Cloud AI</h2>
+  <div class="checkset" data-check="cloud"></div>
+ </div>
+</section>
+
+<!-- ============ CLOSE ============ -->
+<section class="slide discuss" id="close">
+ <div class="page">
+  <div class="kicker">Discussion · No answer on this page</div>
+  <h2>Back to the flight line question</h2>
+  <div class="bigq">Your command wants AI to predict which aircraft parts will fail before the next scheduled inspection.</div>
+  <p class="lead">What would you need to know before you say yes? What would make you say no?</p>
+  <p class="muted">Use tonight's terms: a root cause, a principle, the cost of each error, a decision gate, one of the five parts, how you would test it, or buy, customize, or build.</p>
+  <div class="row noprint"><button class="btn" data-pick>Pick a student</button></div>
+  <label class="f">My notes</label>
+  <div class="wlines"><label class="wl"><span></span><input type="text" id="nClose1" aria-label="Notes line 1"></label><label class="wl"><span></span><input type="text" id="nClose2" aria-label="Notes line 2"></label><label class="wl"><span></span><input type="text" id="nClose3" aria-label="Notes line 3"></label><label class="wl"><span></span><input type="text" id="nClose4" aria-label="Notes line 4"></label></div>
+ </div>
+</section>
+
+<section class="slide" id="wrap">
+ <div class="page">
+  <div class="kicker">Wrap-up</div>
+  <h2>What to take from tonight</h2>
+  <div class="grid2">
+   <div class="card"><h3>Before you choose any technology</h3><ul style="padding-left:18px;margin:0"><li>Most AI projects fail for reasons that have nothing to do with the model.</li><li>Name the problem first: who decides what, and when.</li><li>Try the simple answer first.</li><li>Decide which error you would rather risk, and why.</li><li>Test it on your own hard examples, with the answers written down first.</li></ul></div>
+   <div class="card"><h3>After you choose</h3><ul style="padding-left:18px;margin:0"><li>Run a pilot with a measure and an end date.</li><li>Put gates where someone can stop the project.</li><li>Name an owner for monitoring.</li><li>Count the total cost, not the price list.</li></ul></div>
+  </div>
+  <div class="card noprint" style="margin-top:14px"><h3>Keep your work</h3><p style="margin-top:0">Print the whole lecture, or save it as a PDF (Portable Document Format). Every check you answered and everything you typed prints with it. Your choices are marked "your answer."</p><button class="btn" id="printAll2">Print the whole lecture with my answers</button></div>
+  <div class="do"><b>Next:</b> Break, then the AI Lab Sprint with your group. Tonight you log in to the AWS Learner Lab and test Amazon Rekognition yourself. The Unit 3 project is due Tuesday, November 10, at 12:00 noon Japan Standard Time. Start taking your 15 photos this week, and write your answer key before you test.</div>
+ </div>
+</section>
+
+</div>
+
+<div id="notes"></div>
+
+<div class="modal" id="pickModal"><div class="box">
+ <div class="kicker">Next to answer</div>
+ <div id="pickName"></div>
+ <div class="row" style="justify-content:center"><button class="btn" id="pickAgain">Pick again</button><button class="btn ghost" id="pickClose">Close</button></div>
+ <p class="muted" style="text-align:center;font-size:.85rem">A name will not repeat until everyone has been picked.</p>
+</div></div>
+
+<div class="modal" id="namesModal"><div class="box" style="max-width:760px;max-height:90vh;overflow:auto">
+ <h3>Class list</h3>
+ <p class="muted">Type one first name in each box. Empty boxes are skipped. Select <b>Add a name box</b> if you need more. The list saves in this browser.</p>
+ <div id="nameSlots" class="slots"></div>
+ <div class="row"><button class="btn ghost" id="namesAdd">Add a name box</button><button class="btn ghost" id="namesClear">Clear all</button></div>
+ <div class="row"><button class="btn" id="namesSave">Save</button><button class="btn ghost" id="namesCancel">Cancel</button></div>
+</div></div>
+
+<script>
+/* =====  EDIT THIS LIST each term. The Class list button also changes it in your browser. ===== */
+const CLASS_NAMES = []; // Add names with the Class list button. They save only in your own browser.
+
+/* ---------- utilities ---------- */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const store = {get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},
+               set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const money = n => (n<0?'−$':'$')+fmt(Math.abs(n));
+const esc=t=>String(t||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+/* ---------- theme ---------- */
+const savedTheme = store.get('u3theme', null);
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+$('#bTheme').onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const t = dark ? 'light' : 'dark'; document.documentElement.dataset.theme = t; store.set('u3theme', t);
+  redrawAll();
+};
+
+/* ---------- names ---------- */
+let names = store.get('u3names', CLASS_NAMES);
+function renderNames(){ $('#coverNames').innerHTML = names.map(n=>`<span class="chip">${esc(n)}</span>`).join(''); $('#coverWelcome').style.display = names.length?'':'none'; }
+renderNames();
+const MIN_SLOTS = 20;
+function slotHTML(i,v){ return `<label class="slot"><span>${i}</span><input type="text" value="${String(v||'').replace(/"/g,'&quot;')}" aria-label="Student ${i}"></label>`; }
+function drawSlots(list){ const n=Math.max(MIN_SLOTS, list.length+2); let h=''; for(let i=0;i<n;i++) h+=slotHTML(i+1,list[i]); $('#nameSlots').innerHTML=h; }
+$('#bNames').onclick = () => { drawSlots(names); $('#namesModal').classList.add('show'); };
+$('#namesAdd').onclick = () => { const box=$('#nameSlots'); box.insertAdjacentHTML('beforeend', slotHTML(box.children.length+1,'')); box.lastElementChild.querySelector('input').focus(); };
+$('#namesClear').onclick = () => drawSlots([]);
+$('#namesCancel').onclick = () => $('#namesModal').classList.remove('show');
+$('#namesSave').onclick = () => { names = $$('#nameSlots input').map(i=>i.value.trim()).filter(Boolean);
+  store.set('u3names', names); pool=[]; renderNames(); $('#namesModal').classList.remove('show'); };
+let pool = [];
+function pick(){
+  if (!names.length) { $('#pickName').textContent='Add names first'; return; }
+  if (!pool.length) pool = [...names].sort(()=>Math.random()-.5);
+  const final = pool.pop(); let i=0; const el=$('#pickName');
+  const spin = setInterval(()=>{ el.textContent = names[Math.floor(Math.random()*names.length)]; if(++i>12){clearInterval(spin); el.textContent=final;} }, 70);
+}
+function openPick(){ $('#pickModal').classList.add('show'); pick(); }
+$('#bPick').onclick = openPick; $('#pickAgain').onclick = pick; $('#pickClose').onclick = () => $('#pickModal').classList.remove('show');
+document.addEventListener('click', e => { if (e.target.matches('[data-pick]')) openPick(); });
+
+/* ---------- book navigation ---------- */
+const slides = $$('.slide'); let cur = 0, busy = false;
+slides.forEach((s,i)=>{ const p=document.createElement('div'); p.className='pnum'; p.textContent=(i+1); s.appendChild(p); });
+const inited = {};
+function show(n){
+  if (n<0 || n>=slides.length || n===cur || busy) return;
+  const old = slides[cur], nu = slides[n], fwd = n>cur;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  stop3D(old);
+  if (reduce){ old.classList.remove('active'); nu.classList.add('active'); }
+  else if (fwd){
+    busy=true; nu.classList.add('active'); old.classList.remove('active'); old.classList.add('out');
+    setTimeout(()=>{ old.classList.remove('out'); busy=false; }, 660);
+  } else {
+    busy=true; nu.classList.add('active','in');
+    setTimeout(()=>{ nu.classList.remove('in'); old.classList.remove('active'); busy=false; }, 660);
+  }
+  cur = n; nu.scrollTop = 0; update(); store.set('u3page', n);
+}
+function update(){
+  $('#count').textContent = `${cur+1} / ${slides.length}`;
+  $('#progress').style.width = ((cur+1)/slides.length*100)+'%';
+  const s = slides[cur]; const nt = s.querySelector('.notes');
+  $('#notes').innerHTML = nt ? nt.innerHTML : '<p class="muted">No notes for this page.</p>';
+  const init = s.dataset.init;
+  if (init && !inited[init] && INIT[init]) { inited[init]=true; INIT[init](s); }
+  start3D(s);
+}
+$('#bNext').onclick = () => show(cur+1); $('#bPrev').onclick = () => show(cur-1);
+$('#bAgenda').onclick = () => show(slides.indexOf($('#agendaSlide')));
+if ($('#bNotes')) $('#bNotes').onclick = () => { $('#notes').classList.toggle('show'); $('#bNotes').classList.toggle('on'); $('#stage').classList.toggle('withnotes'); setTimeout(()=>window.dispatchEvent(new Event('resize')),50); };
+$$('#agendaList li').forEach(li => li.onclick = () => show(slides.indexOf(document.getElementById(li.dataset.go))));
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea,select')) return;
+  if (e.key==='ArrowRight'||e.key==='PageDown') show(cur+1);
+  else if (e.key==='ArrowLeft'||e.key==='PageUp') show(cur-1);
+  else if ((e.key==='n'||e.key==='N') && $('#bNotes')) $('#bNotes').click();
+  else if (e.key==='p'||e.key==='P') openPick();
+  else if (e.key==='Escape') $$('.modal').forEach(m=>m.classList.remove('show'));
+});
+let tx=null; $('#stage').addEventListener('touchstart',e=>{ if(!e.target.closest('.three,input')) tx=e.touches[0].clientX; },{passive:true});
+$('#stage').addEventListener('touchend',e=>{ if(tx===null) return; const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>70) show(cur+(dx<0?1:-1)); tx=null; });
+
+/* ---------- 3D helper ---------- */
+const scenes = [];
+function make3D(el, opts={}){
+  if (typeof THREE==='undefined'){ el.querySelector('.nogl').style.display='flex'; return null; }
+  const w=el.clientWidth||600, h=el.clientHeight||380;
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(w,h); el.appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(opts.fov||45, w/h, .1, 200);
+  camera.position.set(...(opts.cam||[0,2,12])); camera.lookAt(0,0,0);
+  scene.add(new THREE.AmbientLight(0xffffff,.75)); const dl=new THREE.DirectionalLight(0xffffff,.55); dl.position.set(5,10,7); scene.add(dl);
+  const group = new THREE.Group(); scene.add(group);
+  group.rotation.set(opts.rx||0, opts.ry||0, 0);
+  let drag=false, px=0, py=0, auto=opts.auto!==false;
+  if (opts.drag!==false){
+    el.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;auto=false;el.setPointerCapture(e.pointerId);});
+    el.addEventListener('pointermove',e=>{ if(!drag)return; group.rotation.y+=(e.clientX-px)*.01; group.rotation.x=Math.max(-1.3,Math.min(1.3,group.rotation.x+(e.clientY-py)*.01)); px=e.clientX; py=e.clientY;});
+    el.addEventListener('pointerup',()=>drag=false);
+  }
+  const S = {el, renderer, scene, camera, group, running:false, tick:null};
+  function loop(){ if(!S.running) return; if(auto && opts.spin) group.rotation.y += opts.spin; if(S.tick) S.tick(); renderer.render(scene,camera); requestAnimationFrame(loop); }
+  S.start = () => { if(S.running) return; S.running=true; loop(); };
+  S.stop = () => S.running=false;
+  new ResizeObserver(()=>{ const W=el.clientWidth,H=el.clientHeight; if(!W||!H) return; renderer.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix(); }).observe(el);
+  scenes.push(S); return S;
+}
+function start3D(slide){ scenes.forEach(S=>{ if(slide.contains(S.el)) S.start(); }); }
+function stop3D(slide){ scenes.forEach(S=>{ if(slide.contains(S.el)) S.stop(); }); }
+const col = v => new THREE.Color(css(v));
+function textSprite(txt, pos, size=.9, color){
+  const c=document.createElement('canvas'); c.width=1024; c.height=128; const x=c.getContext('2d');
+  x.font='600 56px "Source Sans 3", sans-serif'; x.fillStyle=color||css('--ink'); x.textAlign='center'; x.textBaseline='middle'; x.fillText(txt,512,64);
+  const t=new THREE.CanvasTexture(c); const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
+  s.scale.set(size*8,size,1); s.position.copy(pos); return s;
+}
+const REDRAW = {};
+function redrawAll(){ Object.keys(REDRAW).forEach(k=>{ if(inited[k]) REDRAW[k](); }); }
+
+/* seeded random so every laptop shows the same data */
+let seed = 7; const rnd = () => { seed = (seed*16807)%2147483647; return (seed-1)/2147483646; };
+const gauss = () => { let u=0,v=0; while(!u)u=rnd(); while(!v)v=rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+
+/* lifecycle ring, shared by the cover and the gate review */
+const PHASES=['Define','Data','Build or buy','Test','Deploy','Monitor'];
+const ringAngle = i => Math.PI/2 - i*2*Math.PI/6;
+function buildRing(S, R){
+  const blocks=[];
+  PHASES.forEach((p,i)=>{ const a=ringAngle(i);
+    const m=new THREE.Mesh(new THREE.BoxGeometry(1.5,.55,.9), new THREE.MeshStandardMaterial({color:col('--accent'),roughness:.5}));
+    m.position.set(R*Math.cos(a),0,-R*Math.sin(a)); m.rotation.y=a+Math.PI/2; S.group.add(m); blocks.push(m);
+    S.group.add(textSprite(`${i+1}. ${p}`, new THREE.Vector3((R+1.3)*Math.cos(a),.75,-(R+1.3)*Math.sin(a)), .7));
+  });
+  const pts=[]; for(let k=0;k<=96;k++){ const a=k/96*Math.PI*2; pts.push(new THREE.Vector3(R*Math.cos(a),-.05,-R*Math.sin(a))); }
+  S.group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:css('--muted')})));
+  return blocks;
+}
+
+/* ---------- interactive pages ---------- */
+const INIT = {};
+
+INIT.cover = () => {
+  const S = make3D($('#coverCanvas'), {cam:[0,6.6,8.2], drag:false});
+  if(!S) return;
+  buildRing(S, 3.1);
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.22,20,16), new THREE.MeshStandardMaterial({color:col('--amber'),emissive:col('--amber'),emissiveIntensity:.4}));
+  S.group.add(orb); S.camera.lookAt(0,-.4,0);
+  let t=0; S.tick=()=>{ t+=0.006; const a=Math.PI/2 - t; orb.position.set(3.1*Math.cos(a),.5,-3.1*Math.sin(a)); S.group.rotation.y=Math.sin(t*.4)*.15; };
+};
+
+/* hook */
+(function(){
+  const box=$('#hookProjects'); box.innerHTML=[...Array(10)].map((_,i)=>`<div class="proj">${i+1}</div>`).join('');
+  const paint=(guess,real)=>{ $$('#hookProjects .proj').forEach((p,i)=>{ p.classList.toggle('guess', i<guess && real===null); p.classList.toggle('fail', real!==null && i<real); }); };
+  let picked=null;
+  $('#hookSlider').oninput=e=>{ $('#hookGuess').textContent=e.target.value; paint(+e.target.value,null); };
+  paint(3,null);
+  $$('#hookOpts .opt').forEach(b=>b.onclick=()=>{ picked=+b.dataset.v; $$('#hookOpts .opt').forEach(x=>x.classList.toggle('on',x===b)); });
+  $('#hookShow').onclick=()=>{ const g=+$('#hookSlider').value; paint(g,8);
+    $$('#hookOpts .opt').forEach(x=>{ x.classList.remove('on','right','wrong','mine'); const v=+x.dataset.v; if(v===3) x.classList.add('right'); else if(v===picked) x.classList.add('wrong'); if(v===picked) x.classList.add('mine'); });
+    $('#hookVerdict').innerHTML = `You guessed <b>${g} of 10</b>. The red squares show the real answer.` + (picked===null?'':picked===3?' <span class="good"><b>You picked the right reason.</b></span>':' <span class="bad"><b>Most people pick a technical reason. The real one is not technical.</b></span>');
+    $('#hookWhy').classList.add('show'); };
+})();
+
+/* one sentence */
+INIT.sentence = () => {
+  const draw=()=>{ const w=$('#sWho').value.trim(), d=$('#sWhat').value.trim(), n=$('#sWhen').value.trim();
+    if(!w&&!d&&!n){ $('#sOut').innerHTML='<span class="muted">Your sentence appears here.</span>'; return; }
+    $('#sOut').innerHTML=`"The AI will help <b>${esc(w)||'___'}</b> decide <b>${esc(d)||'___'}</b>, <b>${esc(n)||'___'}</b>."`
+      + (w&&d&&n?'<p class="muted" style="margin:8px 0 0;font-size:.92rem">Test it: could someone check, a month from now, whether that decision got better?</p>':''); };
+  ['#sWho','#sWhat','#sWhen'].forEach(i=>$(i).oninput=draw); draw();
+};
+
+/* student list of root causes */
+INIT.listcauses = () => {
+  const ids=['lc1','lc2','lc3','lc4','lc5','lcTop','lcN1','lcN2','lcN3','lcN4'];
+  const saved=store.get('u3listcauses',{});
+  ids.forEach(id=>{ const el=document.getElementById(id); el.value=saved[id]||''; el.oninput=()=>{ saved[id]=el.value; store.set('u3listcauses',saved); }; });
+  $('#lcPrint').onclick=()=>printOne($('#listCauses'));
+};
+function printOne(slide){
+  slide.classList.add('print-target'); document.body.classList.add('print-one');
+  const done=()=>{ slide.classList.remove('print-target'); document.body.classList.remove('print-one'); window.removeEventListener('afterprint',done); };
+  window.addEventListener('afterprint',done); window.print(); setTimeout(done,1000);
+}
+
+/* pairs */
+INIT.pairs = () => {
+  const L=[['The wrong problem','Leaders misunderstand what the AI should do'],['Not enough good data','The data does not exist or does not fit'],['Chasing the technology','The newest tool, picked for excitement'],['Weak infrastructure','No systems to move data and run the model'],['A problem too hard for AI','The task needs judgment AI does not have']];
+  const R=[['Invest in infrastructure','Budget for pipelines and monitoring, not just the model',3],['Make sure the builders understand the purpose','Users and builders together from day one',0],['Understand AI\'s limits','Ask an expert if it is feasible first',4],['Choose enduring problems','Commit to one problem for at least a year',1],['Focus on the problem, not the technology','Try the spreadsheet or the simple rule first',2]];
+  $('#pairL').innerHTML=L.map((x,i)=>`<button class="pbtn" data-l="${i}"><b>${x[0]}</b><small>${x[1]}</small></button>`).join('');
+  $('#pairR').innerHTML=R.map((x,i)=>`<button class="pbtn" data-r="${x[2]}"><b>${x[0]}</b><small>${x[1]}</small></button>`).join('');
+  let sel=null, done=0;
+  $$('#pairL .pbtn').forEach(b=>b.onclick=()=>{ if(b.classList.contains('done')) return; sel=+b.dataset.l; $$('#pairL .pbtn').forEach(x=>x.classList.toggle('sel',x===b)); });
+  $$('#pairR .pbtn').forEach(b=>b.onclick=()=>{ if(b.classList.contains('done')||sel===null) return;
+    const l=$(`#pairL [data-l="${sel}"]`);
+    if(+b.dataset.r===sel){ b.classList.add('done'); l.classList.remove('sel'); l.classList.add('done'); sel=null; done++; $('#pairScore').textContent=`${done} / 5`; if(done===5) $('#pairMore').classList.add('show'); }
+    else { b.classList.add('miss'); setTimeout(()=>b.classList.remove('miss'),600); } });
+};
+
+/* pilot */
+INIT.pilot = () => {
+  const W=['<b class="bad">Not a pilot.</b> Plan A has no limit (all 12 clinics), no success measure, and no end date. If it goes wrong, it goes wrong everywhere at once.',
+    '<b class="good">This is a real pilot.</b> It is limited (one schedule), uses real users (the front desk), has a success measure (18 percent down to 14 percent or lower), and has an end date (January 31). On February 1 someone can decide: continue, change course, or stop.',
+    '<b class="bad">Not a pilot.</b> Plan C is limited, but it has no success measure and no end date. The vendor, who wants to sell the product, decides when it is done.'];
+  $$('#pilotOpts .opt').forEach(b=>b.onclick=()=>{ const v=+b.dataset.v;
+    $$('#pilotOpts .opt').forEach(x=>{ x.classList.remove('right','wrong','mine'); if(+x.dataset.v===1) x.classList.add('right'); else if(x===b) x.classList.add('wrong'); }); b.classList.add('mine');
+    $('#pilotWhy').innerHTML=W[v]+(v===1?'':' '+W[1].replace('<b class="good">This is a real pilot.</b>','<b>Plan B is the real pilot.</b>')); $('#pilotWhy').classList.add('show'); });
+};
+
+/* bakery */
+INIT.bakery = () => {
+  const O=[{n:'A. GenAI assistant',y1:30000,yl:6000,save:14400*.2},{n:'B. Custom forecast',y1:12000,yl:3000,save:14400*.6},{n:'C. Spreadsheet',y1:600,yl:0,save:14400*.5}];
+  const draw=()=>{ const y=+$('#bkYears').value; $('#bkY').textContent=y;
+    const net=O.map(o=>o.save*y-(o.y1+o.yl*(y-1))); const mx=Math.max(40000,...net.map(Math.abs));
+    $('#bkBars').innerHTML=O.map((o,i)=>{ const v=net[i], w=Math.abs(v)/mx*50; const c=v>=0?'var(--good)':'var(--bad)';
+      return `<div class="hbar"><span><b>${o.n}</b></span><div class="trk"><div class="zero" style="left:50%"></div><div class="fill" style="background:${c};${v>=0?`left:50%;width:${w}%`:`left:${50-w}%;width:${w}%`}"></div></div><span class="v ${v>=0?'good':'bad'}">${money(v)}</span></div>`; }).join('')
+      +'<p class="muted" style="font-size:.85rem;margin:4px 0 0">Money saved on waste minus money spent. Left of the line is a loss.</p>';
+    const best=net.indexOf(Math.max(...net));
+    $('#bkNote').innerHTML=`After ${y} year${y>1?'s':''}, <b>${O[best].n}</b> is ahead.`+(y>=3?' Option B saves $1,440 a year more than the spreadsheet, but it costs $3,000 a year to keep running. It never catches up.':'');
+  };
+  $('#bkYears').oninput=draw; draw();
+  $('#bkCheck').onclick=()=>{ const g=+$('#bkGuess').value;
+    $('#bkMsg').innerHTML = g===41 ? '<b class="good">41 loaves.</b> (42 + 38 + 45 + 39) ÷ 4 = 41. That is the whole method. Adjust it for a holiday or a rainy forecast, and you have option C.'
+      : `<b class="bad">Not quite.</b> Add the four Tuesdays and divide by 4: (42 + 38 + 45 + 39) ÷ 4 = <b>41</b>. That is the whole method.`; };
+};
+
+/* cost lab */
+INIT.costlab = () => {
+  const SC={
+   flight:{n:1000,pos:20,fn:500000,fp:5000,d:[72,10,30,12],L:['failing parts caught','good parts pulled (false alarms)','failing parts missed','good parts left alone'],
+     setup:'1,000 parts are due for their next inspection. <b>20</b> of them will fail before then. Missing a failing part costs about <b>$500,000</b> (an in-flight emergency, damage to the aircraft, a lost mission, an investigation). Pulling a good part to inspect it costs about <b>$5,000</b> (labor and downtime). A <b>false alarm</b> here is a good part that gets pulled.'},
+   clinic:{n:1000,pos:180,fn:150,fp:130,d:[62,13,38,13],L:['no-shows caught','patients double-booked who came anyway (false alarms)','no-shows missed','kept appointments left alone'],
+     setup:'1,000 appointments are on next week\'s schedule. <b>180</b> will be missed. The clinic double-books the time slot of every patient the model flags. A missed appointment that was not flagged costs about <b>$150</b> of idle doctor time. A <b>false alarm</b> here is a patient who was flagged and came anyway: the doctor is double-booked, which costs about <b>$130</b> in waiting time, overtime, and an unhappy patient.'}};
+  const scores={}; seed=41;
+  Object.keys(SC).forEach(k=>{ const s=SC[k]; const P=[],N=[];
+    for(let i=0;i<s.pos;i++) P.push(Math.max(0,Math.min(100,s.d[0]+gauss()*s.d[1])));
+    for(let i=0;i<s.n-s.pos;i++) N.push(Math.max(0,Math.min(100,s.d[2]+gauss()*s.d[3])));
+    scores[k]={P,N}; });
+  const at=(k,c)=>{ const {P,N}=scores[k], s=SC[k]; const tp=P.filter(x=>x>=c).length, fn=s.pos-tp, fp=N.filter(x=>x>=c).length, tn=N.length-fp;
+    return {tp,fn,fp,tn,cost:fn*s.fn+fp*s.fp}; };
+  let k='flight';
+  const curve=key=>[...Array(101).keys()].map(c=>at(key,c).cost);
+  const best=key=>{ const cv=curve(key); let b=0; cv.forEach((v,i)=>{ if(v<cv[b]) b=i; }); return b; };
+  const drawChart=c=>{ const cv=curve(k), mx=Math.max(...cv), W=480,H=220,L=62,B=30,T=12,Rr=12;
+    const x=v=>L+v/100*(W-L-Rr), y=v=>T+(1-v/mx)*(H-T-B);
+    let s=`<rect x="0" y="0" width="${W}" height="${H}" fill="none"/>`;
+    for(let g=0;g<=4;g++){ const v=mx*g/4; s+=`<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="${css('--line')}"/><text x="${L-6}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="${css('--muted')}">${v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+fmt(v/1000)+'k'}</text>`; }
+    [0,25,50,75,100].forEach(v=>{ s+=`<text x="${x(v)}" y="${H-B+16}" font-size="11" text-anchor="middle" fill="${css('--muted')}">${v}</text>`; });
+    s+=`<text x="${(L+W-Rr)/2}" y="${H-2}" font-size="11" text-anchor="middle" fill="${css('--muted')}">Cutoff</text>`;
+    s+=`<polyline fill="none" stroke="${css('--accent')}" stroke-width="2.5" points="${cv.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`;
+    s+=`<line x1="${x(c)}" x2="${x(c)}" y1="${T}" y2="${H-B}" stroke="${css('--amber')}" stroke-width="2" stroke-dasharray="4 3"/><circle cx="${x(c)}" cy="${y(cv[c])}" r="6" fill="${css('--amber')}"/>`;
+    $('#clChart').innerHTML=s; };
+  const draw=()=>{ const s=SC[k], c=+$('#clCut').value, r=at(k,c); $('#clCutV').textContent=c; $('#clSetup').innerHTML=s.setup;
+    $('#clMatrix').innerHTML=`<div class="h"></div><div class="h">Will happen</div><div class="h">Will not happen</div>
+     <div class="h">Flagged</div><div class="ok"><b>${r.tp}</b> ${s.L[0]}</div><div class="fp"><b>${r.fp}</b> ${s.L[1]}</div>
+     <div class="h">Not flagged</div><div class="fn"><b>${r.fn}</b> ${s.L[2]}</div><div class="ok"><b>${r.tn}</b> ${s.L[3]}</div>`;
+    $('#clCost').innerHTML=`<div class="muted">Total cost at this cutoff</div><div class="stat">${money(r.cost)}</div>
+     <div style="font-size:.93rem;margin-top:6px">${r.fn} missed × ${money(s.fn)} = <b>${money(r.fn*s.fn)}</b><br>${r.fp} false alarms × ${money(s.fp)} = <b>${money(r.fp*s.fp)}</b></div>`;
+    drawChart(c); };
+  $('#clCut').oninput=()=>{ $('#clMsg').innerHTML=''; draw(); };
+  $$('#clTabs .tab').forEach(t=>t.onclick=()=>{ $$('#clTabs .tab').forEach(x=>x.classList.remove('on')); t.classList.add('on'); k=t.dataset.s; $('#clMsg').innerHTML=''; draw(); });
+  $('#clBest').onclick=()=>{ const b=best(k), r=at(k,b); $('#clCut').value=b; draw();
+    $('#clMsg').innerHTML = k==='flight'
+      ? `<b>Lowest cost: cutoff ${b}.</b> It catches ${r.tp} of 20 failing parts and pulls ${r.fp} good ones. A miss costs 100 times as much as a false alarm, so it pays to pull ${r.fp} good parts to catch ${r.tp} failing ones. Now switch to the clinic and compare.`
+      : `<b>Lowest cost: cutoff ${b}.</b> At the clinic a miss costs about the same as a false alarm, so the cheapest setting is higher than on the flight line. It accepts missing many no-shows to avoid double-booking patients who would have come. Same kind of decision, different costs, different right answer.`; };
+  REDRAW.costlab=draw; draw();
+};
+
+/* gates */
+INIT.gates = () => {
+  const G=[
+   {at:0, title:'Gate 1 · after defining the problem', rep:'The clinic manager says the goal is "fewer no-shows." The front desk says the goal is "fill the empty slots." The vendor\'s team says the goal is "90 percent accuracy."', ans:1,
+    fb:['Continuing means building toward three different targets. When it is done, each person will judge it by a different measure.','<b>Change course.</b> Go back and agree on one sentence and one success measure that the manager, the front desk, and the builders can all say in the same words. This gate exists for exactly this.','Stopping is too strong. Nothing says the problem is not worth solving. The team just has not agreed on what it is.']},
+   {at:1, title:'Gate 2 · after assessing the data', rep:'Two years of appointment records exist. 23 percent of patients have no phone number on file. The clinic\'s legal office confirms the records may be used for scheduling.', ans:0,
+    fb:['<b>Continue.</b> The data exists, it fits the problem, and the clinic has the right to use it. The missing phone numbers are a known gap to plan for, by filling in and flagging them (a Unit 4 topic), not a reason to stop.','Changing course is not needed. The gaps are known and can be handled in preparation.','Stopping would throw away a usable dataset over a fixable gap.']},
+   {at:3, title:'Gate 3 · after testing', rep:'On appointments the model has never seen, it beats the current method (calling every patient) overall. For patients over 65, it is much worse than the current method.', ans:1,
+    fb:['Continuing would deploy a system that works worse for older patients than what the clinic does now. Overall accuracy hid the weak spot.','<b>Change course.</b> The gate rule says continue only if the model works acceptably for every group it affects. Go back, find out why it fails older patients, and fix that before deploying.','Stopping is too strong. The model works well for most patients. Fix the weak spot first.']},
+   {at:4, title:'Gate 4 · after the pilot', rep:'One doctor\'s schedule for two months. The front desk acted on the predictions. No-shows on that schedule fell from 18 to 15 percent. Overrides were rare. The front desk supervisor agreed to own monitoring.', ans:0,
+    fb:['<b>Continue.</b> Real users acted on the predictions, the measure improved, and phase 6 has a named owner. Roll out to more schedules, with monitoring.','Changing course is not needed. Note that 15 percent missed the pilot target of 14 percent. Some sponsors would extend the pilot. Continuing with monitoring is the stronger call here.','Stopping a pilot that improved results throws away the work for no reason.']},
+   {at:5, title:'Gate 5 · month 14, monitoring', rep:'The clinic added evening hours in month 11. Since then, the model\'s accuracy has fallen from 82 to 70 percent. Evening appointments make up most of the errors.', ans:1,
+    fb:['Continuing means accepting a model that gets worse every month. That is how drift does damage.','<b>Change course.</b> This is drift. Loop back to phase 2: collect data that includes evening appointments, retrain, and test again. The loop from phase 6 to the start of the cycle is the whole point.','Stopping is too strong while the model can be retrained. If retraining fails, retiring it becomes the right call.']}];
+  const CH=['Continue','Change course','Stop'];
+  let gi=0, sc=0, answered=false;
+  const S=make3D($('#gateView'),{cam:[0,8.6,9.8],rx:0,ry:0,spin:0}); const R=3.1; let token=null, bars=[], ta=ringAngle(0), aCur=ringAngle(0);
+  if(S){ buildRing(S,R); S.camera.lookAt(0,-.6,0);
+    token=new THREE.Mesh(new THREE.SphereGeometry(.26,20,16), new THREE.MeshStandardMaterial({color:col('--amber'),emissive:col('--amber'),emissiveIntensity:.4})); S.group.add(token);
+    G.forEach(g=>{ const a=ringAngle(g.at)-Math.PI/6; const grp=new THREE.Group();
+      const post=new THREE.MeshStandardMaterial({color:col('--muted')});
+      const p1=new THREE.Mesh(new THREE.BoxGeometry(.1,1.1,.1),post), p2=p1.clone(); p1.position.set(-.45,.4,0); p2.position.set(.45,.4,0);
+      const bar=new THREE.Mesh(new THREE.BoxGeometry(1,.14,.14), new THREE.MeshStandardMaterial({color:col('--line')})); bar.position.y=.95;
+      grp.add(p1,p2,bar); grp.position.set(R*Math.cos(a),0,-R*Math.sin(a)); grp.rotation.y=a; S.group.add(grp); bars.push(bar); });
+    S.tick=()=>{ if(aCur>ta) aCur=Math.max(ta,aCur-.03); token.position.set(R*Math.cos(aCur),.55,-R*Math.sin(aCur)); };
+  }
+  const draw=()=>{ const g=G[gi]; answered=false; $('#gateNext').disabled=true;
+    if(S){ ta=ringAngle(g.at)-Math.PI/6+.12; if(gi===0) aCur=ringAngle(0); bars[gi].material.color=col('--amber'); }
+    $('#gateCard').innerHTML=`<div class="kicker">${g.title}</div><p style="margin-top:0">${g.rep}</p><div class="opts" id="gOpts">${CH.map((c,i)=>`<button class="opt" data-v="${i}">${c}</button>`).join('')}</div><div class="why" id="gWhy"></div>`;
+    $$('#gOpts .opt').forEach(b=>b.onclick=()=>{ if(answered) return; answered=true; const v=+b.dataset.v, ok=v===g.ans; if(ok) sc++;
+      $$('#gOpts .opt').forEach(x=>{ const i=+x.dataset.v; if(i===g.ans) x.classList.add('right'); else if(i===v) x.classList.add('wrong'); }); b.classList.add('mine');
+      $('#gWhy').innerHTML=(ok?'<b class="good">Good call.</b> ':'<b class="bad">Not the best call.</b> ')+g.fb[v]+(ok?'':' <br><b>Best call:</b> '+g.fb[g.ans]); $('#gWhy').classList.add('show');
+      if(S) bars[gi].material.color=col(v===0?'--good':v===1?'--amber':'--bad');
+      $('#gateScore').textContent=`${sc} of ${gi+1} best calls`;
+      $('#gateNext').disabled=gi>=G.length-1; if(gi>=G.length-1) $('#gateScore').textContent+=' · Done. The last gate sent the project back into the loop.'; });
+  };
+  $('#gateNext').onclick=()=>{ if(gi<G.length-1){ gi++; draw(); } };
+  $('#gateReset').onclick=()=>{ gi=0; sc=0; $('#gateScore').textContent=''; if(S) bars.forEach(b=>b.material.color=col('--line')); draw(); };
+  draw();
+};
+
+/* drift */
+INIT.drift = () => {
+  const M=18, PRICE=3, DAYS=30, LIMIT=15, base=m=>120+10*Math.sin((m-1)/12*2*Math.PI);
+  seed=9; const noise=[...Array(M)].map(()=>gauss()*3);
+  const actual=[...Array(M)].map((_,i)=>Math.round(base(i+1)+noise[i]+(i+1>=13?42:0)));
+  const oldFc=[...Array(M)].map((_,i)=>Math.round(base(i+1)));
+  const errOf=(f,i)=>Math.abs(f[i]-actual[i])/actual[i]*100;
+  const ALERT=actual.findIndex((_,i)=>errOf(oldFc,i)>LIMIT)+1;       // month 13
+  // with monitoring, the model is retrained after the alert and follows the new pattern from the next month
+  const newFc=oldFc.map((v,i)=>i+1>ALERT?Math.round(base(i+1)+42):v);
+  const RUN=[{fc:oldFc, name:'No monitoring'},{fc:newFc, name:'Monitoring on'}];
+  let mode=0, n=6; const done=[null,null];
+  const short=(f,i)=>Math.max(0,actual[i]-f[i]);                       // pastries a day the forecast left out
+  const lost=(f,upto)=>{ let p=0; for(let i=12;i<upto;i++) p+=short(f,i)*DAYS*PRICE; return p; };
+  const badMonths=(f,upto)=>{ let k=0; for(let i=12;i<upto;i++) if(errOf(f,i)>LIMIT) k++; return k; };
+  const draw=()=>{ const fc=RUN[mode].fc, W=720,H=270,L=52,B=34,T=40,Rr=14, lo=80, hi=200;
+    const x=m=>L+(m-1)/(M-1)*(W-L-Rr), y=v=>T+(1-(v-lo)/(hi-lo))*(H-T-B), bw=(W-L-Rr)/(M-1)*.55;
+    let s='';
+    [80,120,160,200].forEach(v=>{ s+=`<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="${css('--line')}"/><text x="${L-6}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="${css('--muted')}">${v}</text>`; });
+    for(let m=1;m<=M;m++) s+=`<text x="${x(m)}" y="${H-B+16}" font-size="11" text-anchor="middle" fill="${css('--muted')}">${m}</text>`;
+    s+=`<text x="${(L+W)/2}" y="${H-2}" font-size="11" text-anchor="middle" fill="${css('--muted')}">Month</text><text x="8" y="14" font-size="11" fill="${css('--muted')}">Pastries a day</text>`;
+    s+=`<line x1="${x(12.5)}" x2="${x(12.5)}" y1="${T}" y2="${H-B-34}" stroke="${css('--muted')}" stroke-dasharray="3 4"/><text x="${x(12.5)-6}" y="${T-6}" font-size="11" text-anchor="end" fill="${css('--muted')}">School opens</text>`;
+    for(let i=12;i<n;i++){ if(errOf(fc,i)>LIMIT) s+=`<rect x="${x(i+1)-bw/2}" y="${y(actual[i])}" width="${bw}" height="${y(fc[i])-y(actual[i])}" fill="${css('--bad')}" opacity=".35"/>`; }
+    if(mode===1 && n>=ALERT){ s+=`<g><line x1="${x(ALERT)}" x2="${x(ALERT)}" y1="${T}" y2="${H-B-34}" stroke="${css('--bad')}" stroke-width="2"/><rect x="${x(ALERT)+4}" y="${T-2}" width="58" height="18" rx="4" fill="${css('--bad')}"/><text x="${x(ALERT)+33}" y="${T+11}" font-size="11" font-weight="700" text-anchor="middle" fill="#fff">ALERT</text></g>`;
+      if(n>ALERT) s+=`<text x="${x(ALERT+1)+6}" y="${y(newFc[ALERT])+22}" font-size="11" fill="${css('--good')}" font-weight="700">Retrained</text>`; }
+    const pl=(arr,c,d)=>`<polyline fill="none" stroke="${c}" stroke-width="2.5" ${d?'stroke-dasharray="6 4"':''} points="${arr.slice(0,n).map((v,i)=>x(i+1)+','+y(v)).join(' ')}"/>`+arr.slice(0,n).map((v,i)=>`<circle cx="${x(i+1)}" cy="${y(v)}" r="3.5" fill="${c}"/>`).join('');
+    s+=pl(fc,css('--accent'),true)+pl(actual,css('--amber'),false);
+    const LY=H-B-18;
+    s+=`<g font-size="12"><line x1="${L+8}" x2="${L+32}" y1="${LY}" y2="${LY}" stroke="${css('--accent')}" stroke-width="2.5" stroke-dasharray="6 4"/><text x="${L+38}" y="${LY+4}" fill="${css('--ink')}">Forecast (what the baker bakes)</text>
+      <line x1="${L+228}" x2="${L+252}" y1="${LY}" y2="${LY}" stroke="${css('--amber')}" stroke-width="2.5"/><text x="${L+258}" y="${LY+4}" fill="${css('--ink')}">What customers wanted</text>
+      <rect x="${L+410}" y="${LY-7}" width="14" height="14" fill="${css('--bad')}" opacity=".35"/><text x="${L+430}" y="${LY+4}" fill="${css('--ink')}">Empty shelves</text></g>`;
+    $('#drChart').innerHTML=s;
+    const i=n-1, e=errOf(fc,i), L$=lost(fc,n);
+    let msg=`<b>${RUN[mode].name}, month ${n}.</b> Forecast ${fc[i]}, customers wanted ${actual[i]}. Error: <b class="${e>LIMIT?'bad':''}">${e.toFixed(0)} percent</b>.`;
+    if(n<13) msg+=' The model is doing its job.';
+    else if(mode===0) msg+= n<M ? ` Nobody is watching the numbers. The baker sees empty shelves by 8 a.m. and blames a busy week. Lost sales so far: <b class="bad">${money(L$)}</b>.`
+      : ` In month 18 the owner finally compares the forecast with sales by hand and finds the problem. Six months of empty shelves. Lost sales: <b class="bad">${money(L$)}</b>. Now select <b>Run 2: Monitoring on</b>.`;
+    else if(n===ALERT) msg+=` <b class="bad">Alert:</b> the error is above ${LIMIT} percent. The owner learns about it this month, retrains the model on the new sales, and the fix takes effect next month.`;
+    else msg+=` The retrained forecast follows the new pattern. The gap is closed. Lost sales stopped at <b>${money(L$)}</b>.${n===M?' Compare the two rows of the table.':''}`;
+    $('#drMsg').innerHTML=msg; $('#drAdd').disabled=n>=M;
+    if(n===M) done[mode]={found: mode?`Month ${ALERT}, from the alert`:`Month ${M}, by hand`, months:badMonths(fc,M), lost:lost(fc,M)};
+    $('#drTable').innerHTML='<tr><th>Run</th><th>When the owner found out</th><th>Months of empty shelves</th><th>Lost sales</th></tr>'+RUN.map((r,k)=>{ const d=done[k];
+      return `<tr><td><b>${r.name}</b></td><td>${d?d.found:'<span class="muted">Run to month 18</span>'}</td><td>${d?d.months:''}</td><td class="${d?'bad':''}">${d?money(d.lost):''}</td></tr>`; }).join('');
+  };
+  $$('#drTabs .tab').forEach(t=>t.onclick=()=>{ $$('#drTabs .tab').forEach(x=>x.classList.toggle('on',x===t)); mode=+t.dataset.m; n=6; draw(); });
+  $('#drAdd').onclick=()=>{ if(n<M){ n++; draw(); } };
+  $('#drReset').onclick=()=>{ n=6; draw(); };
+  REDRAW.drift=draw; draw();
+};
+
+/* Watson */
+INIT.watson = () => {
+  const E=[['2011','Watson beats two human champions on <i>Jeopardy!</i> IBM decides to turn it into a doctor\'s assistant.'],
+   ['2012','IBM partners with Memorial Sloan Kettering Cancer Center, one of the top cancer hospitals in the United States, to build Watson for Oncology: a system that recommends cancer treatments. Over the following years IBM spends roughly $4 billion buying health data companies.'],
+   ['2017','A University of Texas audit finds that MD Anderson Cancer Center spent more than $60 million on a separate Watson project that never treated a patient.'],
+   ['2018','STAT, a health news site, obtains internal IBM documents. Doctors had reported unsafe and incorrect treatment recommendations. The documents trace the problem to training: the system learned largely from invented cases and the preferences of a small group of specialists at one hospital.'],
+   ['2022','IBM sells its health data and analytics business to an investment firm.']];
+  $('#wTabs').innerHTML=E.map((e,i)=>`<button class="tab${i?'':' on'}" data-i="${i}">${e[0]}</button>`).join('');
+  const sh=i=>{ $('#wBody').innerHTML=`<h3>${E[i][0]}</h3><p style="margin:0">${E[i][1]}</p>`; };
+  $$('#wTabs .tab').forEach(t=>t.onclick=()=>{ $$('#wTabs .tab').forEach(x=>x.classList.remove('on')); t.classList.add('on'); sh(+t.dataset.i); }); sh(0);
+  const W=['<b class="good">Correct.</b> Watson failed in the early phases, long before most hospitals logged in. The goal outran the technology, and real patient data was not available. Both are gate 1 and gate 2 questions.',
+   '<b class="bad">Too late.</b> By 2017 the money was spent. The problems started in the first two phases.',
+   '<b class="bad">Too late.</b> Doctors had been reporting problems internally for years. The flaws started at the first gates.',
+   '<b class="bad">No.</b> More time and money do not fix a goal that is beyond the technology and data that does not match the problem.'];
+  $$('#wOpts .opt').forEach(b=>b.onclick=()=>{ const v=+b.dataset.v; $$('#wOpts .opt').forEach(x=>{ x.classList.remove('right','wrong','mine'); if(+x.dataset.v===0) x.classList.add('right'); else if(x===b) x.classList.add('wrong'); }); b.classList.add('mine');
+    $('#wWhy').innerHTML=W[v]; $('#wWhy').classList.add('show'); $('#wTable').classList.add('show'); });
+};
+
+/* pipeline 3D */
+INIT.pipe = () => {
+  const P=['Data pipeline','Model','Inference','Interface','Monitoring'];
+  const MSG=['<b>Nothing is broken.</b> Maintenance records flow through the pipeline, the model turns them into predictions overnight, and the predictions reach the maintenance chief\'s screen. The ring overhead is monitoring, watching it all.',
+   '<b>Data pipeline broken.</b> Records pile up and never reach the model. On the flight line: the records sit in three systems that do not connect. The model keeps making predictions from old data.',
+   '<b>Model broken.</b> Data arrives and predictions come out, but they are wrong. The red dots look like any other prediction. Only a test against real outcomes shows the problem.',
+   '<b>Inference broken.</b> Predictions arrive, but too slowly. The overnight run finishes at 10 a.m., after the flight schedule is set and the aircraft have flown.',
+   '<b>Interface broken.</b> Predictions are made and then fall on the floor. They go into a report nobody opens, and the maintenance chief never sees them.',
+   '<b>Monitoring broken.</b> Everything looks like it is working. Watch the predictions slowly turn red. The model is drifting, and nobody is watching. This is the most dangerous break because nothing looks broken.'];
+  let mode=0;
+  $('#pipeBtns').innerHTML=P.map((p,i)=>`<button class="btn ghost" data-m="${i+1}">Break: ${p}</button>`).join('')+'<button class="btn" data-m="0">Fix everything</button>';
+  $('#pipeMsg').innerHTML=MSG[0];
+  const S=make3D($('#pipeView'),{cam:[0,3,16.5],rx:.12,ry:-.2}); if(S) S.camera.lookAt(0,.6,0);
+  let parts=[], st={}, ring=null, t0=0;
+  if(S){
+    const mat=c=>new THREE.MeshStandardMaterial({color:col(c),roughness:.5});
+    for(let i=0;i<4;i++){ const c=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,.5),mat('--muted')); c.position.set(-8.2,-.6+i*.55,(i%2)*.5-.25); S.group.add(c); }
+    st.pipe=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,3.2,24,1,true),new THREE.MeshStandardMaterial({color:col('--accent'),transparent:true,opacity:.35,side:THREE.DoubleSide})); st.pipe.rotation.z=Math.PI/2; st.pipe.position.x=-5.8; S.group.add(st.pipe);
+    st.model=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.4,1.4),mat('--accent')); st.model.position.x=-2.6; S.group.add(st.model);
+    st.inf=new THREE.Mesh(new THREE.TorusGeometry(.65,.18,12,32),mat('--violet')); st.inf.position.x=.6; S.group.add(st.inf);
+    st.screen=new THREE.Mesh(new THREE.BoxGeometry(.15,1.6,2.2),mat('--ink')); st.screen.position.x=3.8; S.group.add(st.screen);
+    const person=new THREE.Group(); const body=new THREE.Mesh(new THREE.CylinderGeometry(.35,.4,1.2,16),mat('--muted')); const head=new THREE.Mesh(new THREE.SphereGeometry(.3,16,12),mat('--muted')); head.position.y=.95; person.add(body,head); person.position.set(6.2,-.1,0); S.group.add(person);
+    ring=new THREE.Mesh(new THREE.TorusGeometry(5.4,.06,8,80),new THREE.MeshStandardMaterial({color:col('--good'),emissive:col('--good'),emissiveIntensity:.3})); ring.rotation.x=Math.PI/2; ring.position.y=2.3; S.group.add(ring);
+    [['1. Data pipeline',-5.8],['2. Model',-2.6],['3. Inference',.6],['4. Interface',3.8],['Decision maker',6.2]].forEach(l=>S.group.add(textSprite(l[0],new THREE.Vector3(l[1],-1.8,0),.75)));
+    S.group.add(textSprite('5. Monitoring',new THREE.Vector3(0,2.85,0),.75));
+    for(let i=0;i<34;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),new THREE.MeshStandardMaterial({color:col('--accent')})); m.userData={x:-8+i*(14.2/34),y:0,vy:0,age:0}; S.group.add(m); parts.push(m); }
+    S.tick=()=>{ t0+=.016; st.inf.rotation.z+= mode===3?.004:.04;
+      parts.forEach(m=>{ const u=m.userData; let sp=.045;
+        if(mode===3 && u.x>.6) sp=.006;
+        if(mode===1 && u.x>-4.3 && u.x<-4.1){ sp=0; }
+        u.x+=sp;
+        if(mode===4 && u.x>3.6){ u.vy-=.008; u.y+=u.vy; } else { u.y*=.9; u.vy=0; }
+        if(u.x>6.6||u.y<-4){ u.x=-8.2; u.y=0; u.vy=0; u.age=0; }
+        u.age+=.016;
+        let c='--accent'; if(u.x>-2.6) c='--amber'; if(mode===2&&u.x>-2.6) c='--bad';
+        m.material.color=col(c);
+        if(mode===5&&u.x>-2.6){ const k=Math.min(1,(t0%12)/9); m.material.color=col('--amber').lerp(col('--bad'),k); }
+        m.position.set(u.x, u.y + (mode===1&&sp===0? (m.id%5)*.22 : 0), (mode===1&&sp===0)?((m.id%3)-1)*.25:0); });
+      const bad=i=>mode===i; st.pipe.material.color=col(bad(1)?'--bad':'--accent'); st.model.material.color=col(bad(2)?'--bad':'--accent');
+      st.inf.material.color=col(bad(3)?'--bad':'--violet'); st.screen.material.color=col(bad(4)?'--bad':'--ink');
+      ring.material.color=col(bad(5)?'--line':'--good'); ring.material.emissiveIntensity=bad(5)?0:.3; ring.rotation.z+=.003; };
+  }
+  $$('#pipeBtns .btn').forEach(b=>b.onclick=()=>{ mode=+b.dataset.m; t0=0; $('#pipeMsg').innerHTML=MSG[mode]; parts.forEach((m,i)=>{ m.userData.x=-8+i*(14.2/34); m.userData.y=0; }); });
+};
+
+/* timing sort */
+INIT.timing = () => {
+  const I=[['The bakery\'s daily baking forecast','B','Batch. It runs overnight and is ready at 4 a.m.'],['A credit card fraud check at the register','R','Real time. It must answer before the customer walks away.'],['The clinic\'s list of patients likely to miss tomorrow','B','Batch. The list is needed before the clinic opens, not in seconds.'],['An emergency dispatch tool that flags urgent 911 calls while the caller is talking','R','Real time. A flag that arrives after the call ends is useless.'],['The school\'s weekly list of students falling behind in reading','B','Batch. Teachers act on it each week.'],['The flight line\'s list of parts to inspect early','B','Batch. It runs overnight, before the flight schedule is set.']];
+  let sc=0;
+  $('#timeItems').innerHTML=I.map((it,i)=>`<div class="q" style="padding:10px 14px;margin:8px 0"><div class="qt" style="font-weight:400">${it[0]}</div><div class="opts"><button class="opt" data-i="${i}" data-k="B">Batch</button><button class="opt" data-i="${i}" data-k="R">Real time</button></div><div class="why"></div></div>`).join('');
+  $$('#timeItems .opt').forEach(b=>b.onclick=()=>{ const it=I[b.dataset.i], w=b.closest('.q'); if(w.dataset.done) return; w.dataset.done=1;
+    const ok=b.dataset.k===it[1]; b.classList.add(ok?'right':'wrong','mine'); if(!ok) w.querySelector(`[data-k="${it[1]}"]`).classList.add('right');
+    const y=w.querySelector('.why'); y.innerHTML=`<b class="${ok?'good':'bad'}">${ok?'Correct.':'Not this one.'}</b> ${it[2]}`; y.classList.add('show'); if(ok) sc++; $('#timeScore').textContent=`${sc} / 6`; });
+};
+
+/* two services: Rekognition and Gemini read the same photo */
+INIT.api = () => {
+  const HAND="'Segoe Print','Comic Sans MS','Bradley Hand',cursive";
+  const IMG=[
+   {n:'Price tag', key:'SOURDOUGH $6.00', hard:'No. Printed, flat, and well lit.',
+    svg:`<svg viewBox="0 0 120 84"><rect width="120" height="84" rx="6" fill="#efe6d4"/><rect x="18" y="18" width="84" height="48" rx="3" fill="#fff" stroke="#8a6a3a"/><text x="60" y="38" font-size="11" text-anchor="middle" font-family="sans-serif" font-weight="700" fill="#3a2a10">SOURDOUGH</text><text x="60" y="56" font-size="13" text-anchor="middle" font-family="sans-serif" font-weight="700" fill="#b3362c">$6.00</text></svg>`,
+    rek:[['SOURDOUGH',99.7],['$6.00',99.5]], rekOK:true, gem:'SOURDOUGH $6.00', gemOK:true, tok:279,
+    whyR:'Rekognition returned the tag on two lines. Put together, every character matches the key.',
+    whyG:'Every character matches the key.',
+    msg:'Both services got the easy photo right. This is the kind of image a vendor uses in a demo. It tells you very little.'},
+   {n:'Chalkboard', key:'Blueberry Scone $3.25', hard:'Yes. Handwritten in chalk on a dark board.',
+    svg:`<svg viewBox="0 0 120 84"><rect width="120" height="84" rx="6" fill="#6b4a2b"/><rect x="7" y="7" width="106" height="70" rx="3" fill="#2c3330"/><text x="60" y="36" font-size="11.5" text-anchor="middle" font-family="${HAND}" fill="#eef0e8">Blueberry Scone</text><text x="60" y="60" font-size="15" text-anchor="middle" font-family="${HAND}" fill="#eef0e8">$3.25</text></svg>`,
+    rek:[['Blueberry Scone',97.9],['$3.75',96.8]], rekOK:false, gem:'Blueberry Scone $3.25', gemOK:true, tok:281,
+    whyR:'The price is $3.25. Rekognition read $3.75. One character is wrong, so the read is wrong, even though it reported a confidence score of 96.8.',
+    whyG:'Every character matches the key.',
+    msg:'Rekognition read the 2 as a 7 and still reported 96.8. <b>A high confidence score is not a correct answer.</b> On a price tag, this is the mistake the owner can\'t afford.'},
+   {n:'Kitchen label', key:'Chiken Broth 11/14', hard:'Yes. Handwritten on tape. The label itself has a spelling mistake.',
+    svg:`<svg viewBox="0 0 120 84"><rect width="120" height="84" rx="6" fill="#dde6ea"/><rect x="20" y="12" width="80" height="64" rx="9" fill="#f4f7f8" stroke="#9aa8b0"/><rect x="26" y="28" width="68" height="32" fill="#f6e7a8" stroke="#c9b25a"/><text x="60" y="42" font-size="10" text-anchor="middle" font-family="${HAND}" fill="#1f2a6b">Chiken Broth</text><text x="60" y="55" font-size="10" text-anchor="middle" font-family="${HAND}" fill="#1f2a6b">11/14</text></svg>`,
+    rek:[['Chiken Broth',93.4],['11/14',91.2]], rekOK:true, gem:'Chicken Broth 11/14', gemOK:false, tok:280,
+    whyR:'Rekognition copied the label exactly, misspelling and all. Every character matches the key.',
+    whyG:'The label says Chiken. Gemini wrote Chicken. One letter does not match, so the read is wrong.',
+    msg:'Gemini "fixed" the spelling. It wrote what it expected, not what it saw, and nothing in its response warned you. On a sign, that may not matter. <b>On a part number, a "typical-looking" answer is a wrong part.</b>'}];
+    let im=0; const marks={}; // marks['0R']=true if the student scored that read correctly
+  $('#apiImgs').innerHTML=IMG.map((x,i)=>`<button class="${i?'':'on'}" data-i="${i}">${x.svg}<span>${x.n}</span></button>`).join('');
+  const hl=s=>s.replace(/("[^"]*")(\s*:)/g,'<span class="k">$1</span>$2').replace(/:\s*("[^"]*")/g,': <span class="s">$1</span>').replace(/:\s*([0-9.]+)/g,': <span class="n">$1</span>');
+  const keyText=()=>{ const x=IMG[im]; $('#apiKeyText').innerHTML=`<div class="muted" style="font-size:.85rem">Answer key, written before testing</div>Key text: <b class="mono">${esc(x.key)}</b><br>Hard image: ${x.hard}`; };
+  const req=()=>{ const key=$('#apiKey').checked;
+    $('#apiReq').innerHTML=`POST .../models/gemini:generateContent${key?'\n     ?key=<span class="n">AIza••••••••••••</span>':''}\n\n`+hl(`{
+  "contents": [{ "parts": [
+    { "inline_data": {
+        "mime_type": "image/jpeg",
+        "data": "(${IMG[im].n.toLowerCase()} photo)" } },
+    { "text": "Read the text in this photo.
+       Reply with only the text,
+       exactly as written." }
+  ] }]
+}`); };
+  const tally=()=>{ const n=Object.values(marks).filter(Boolean).length; $('#apiScore').textContent=`${n} of 6 reads scored correctly`; };
+  const clear=msg=>{ ['R','G'].forEach(s=>{ $('#apiRes'+s).innerHTML=`<span class="muted">${msg}</span>`; $('#apiSc'+s).innerHTML=''; $('#apiWhy'+s).classList.remove('show'); }); $('#apiMsg').innerHTML=''; };
+  const scoreBtns=(s,truth,why)=>{ const box=$('#apiSc'+s), w=$('#apiWhy'+s), id=im+s;
+    box.innerHTML='<button class="opt" data-ok="1">Correct</button><button class="opt" data-ok="0">Wrong</button>';
+    box.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{ if(box.dataset.done) return; box.dataset.done=1;
+      const said=b.dataset.ok==='1', ok=said===truth; marks[id]=ok; tally();
+      b.classList.add(ok?'right':'wrong','mine'); if(!ok) box.querySelector(`[data-ok="${truth?1:0}"]`).classList.add('right');
+      w.innerHTML=`<b class="${ok?'good':'bad'}">${ok?'You scored it right.':'Check the rule again.'}</b> ${why}`; w.classList.add('show');
+      if($('#apiScG').dataset.done && $('#apiScR').dataset.done) $('#apiMsg').innerHTML=IMG[im].msg; });
+    delete box.dataset.done; };
+  const send=()=>{ req(); const key=$('#apiKey').checked, x=IMG[im]; $('#apiMsg').innerHTML='';
+    if(!key){
+      $('#apiResR').innerHTML=hl(`{
+  "__type": "UnrecognizedClientException",
+  "message": "The security token included in the request is invalid."
+}`);
+      $('#apiResG').innerHTML=hl(`{
+  "error": {
+    "code": 400,
+    "message": "API key not valid. Please pass a valid API key.",
+    "status": "INVALID_ARGUMENT"
+  }
+}`).replace('"INVALID_ARGUMENT"','<span class="e">"INVALID_ARGUMENT"</span>');
+      ['R','G'].forEach(s=>{ $('#apiSc'+s).innerHTML=''; $('#apiWhy'+s).classList.remove('show'); });
+      $('#apiMsg').innerHTML='<b>No key, no answer.</b> Neither service knows who is asking or whom to bill, so both refuse. That is also why a stolen key is dangerous: the service answers anyone who has it and bills the owner.'; return; }
+    $('#apiResR').innerHTML=hl(`{
+  "TextDetections": [
+${x.rek.map(l=>`    { "DetectedText": "${l[0]}",\n      "Confidence": ${l[1].toFixed(1)} }`).join(',\n')}
+  ]
+}`);
+    $('#apiResG').innerHTML=hl(`{
+  "candidates": [{ "content": { "parts": [
+    { "text": "${x.gem}" }
+  ] } }],
+  "usageMetadata": {
+    "promptTokenCount": ${x.tok},
+    "candidatesTokenCount": ${x.key.split(' ').length+3},
+    "totalTokenCount": ${x.tok+x.key.split(' ').length+3}
+  }
+}`);
+    scoreBtns('R',x.rekOK,x.whyR); scoreBtns('G',x.gemOK,x.whyG);
+  };
+  $$('#apiImgs button').forEach(b=>b.onclick=()=>{ im=+b.dataset.i; $$('#apiImgs button').forEach(x=>x.classList.toggle('on',x===b)); keyText(); req(); clear('Select Send to both services.'); });
+  $('#apiKey').onchange=req; $('#apiSend').onclick=send; keyText(); req(); clear('Select Send to both services.'); tally();
+};
+
+/* how sure can you be: plausible ranges from the project's table */
+INIT.range = () => {
+  const T={15:[80,100],14:[70,99],13:[62,96],12:[55,93],11:[48,89],10:[42,85],9:[36,80],8:[30,75],7:[25,70]};
+  const TR=[{l:'Bakery: Rekognition 13 of 15, Gemini 11 of 15. The owner needs 90 percent.',v:[13,11,90],m:'The bakery owner needs 90 percent on prices, because a person checks the tags each morning.'},
+   {l:'Bakery: Rekognition 15 of 15, Gemini 8 of 15. The owner needs 90 percent.',v:[15,8,90],m:'Same bakery, very different scores.'},
+   {l:'Aircraft maintenance: Rekognition 15 of 15, Gemini 14 of 15. The officer needs 99 percent.',v:[15,14,99],m:'A maintenance officer needs 99 percent on part numbers, because a wrong part can ground an aircraft.'}];
+  const bar=(name,c,need,color)=>{ const [lo,hi]=T[c], p=c/15*100;
+    return `<div class="rng"><div><b>${name}</b><div class="lab">${c} of 15 · ${lo}% to ${hi}%</div></div><div class="trk"><div class="fill" style="left:${lo}%;width:${hi-lo}%;background:var(${color})"></div><div class="dot" style="left:${p}%"></div><div class="need" style="left:${need}%"></div></div></div>`; };
+  const draw=()=>{ const r=+$('#rgR').value, g=+$('#rgG').value, need=+$('#rgN').value;
+    $('#rgRv').textContent=r; $('#rgGv').textContent=g; $('#rgNv').textContent=need;
+    $('#rgBars').innerHTML=bar('Rekognition',r,need,'--accent')+bar('Gemini',g,need,'--violet');
+    const [rl,rh]=T[r], [gl,gh]=T[g], overlap=!(rl>gh||gl>rh);
+    let v='';
+    if(r===g) v+=`<p style="margin-top:0"><b>Same score.</b> The test can't tell the two services apart.</p>`;
+    else if(overlap) v+=`<p style="margin-top:0"><b>The bars overlap</b> from ${Math.max(rl,gl)} to ${Math.min(rh,gh)} percent. This test can't tell which service is better, even though one scored higher. Say so in the memo. That is an honest finding, not a failure.</p>`;
+    else v+=`<p style="margin-top:0"><b>The bars don't overlap.</b> The test shows ${r>g?'Rekognition':'Gemini'} is better.</p>`;
+    const best=r>=g?'Rekognition':'Gemini', bl=Math.max(rl,gl);
+    v+= bl>=need ? `<p style="margin-bottom:0"><b class="good">The left end of ${r===g?'both bars':best+"'s bar"}, ${bl} percent, reaches the ${need} percent the decision-maker needs.</b> The evidence supports using it.</p>`
+      : `<p style="margin-bottom:0"><b class="bad">The left end of ${r===g?'the bars':best+"'s bar"} is ${bl} percent, below the ${need} percent the decision-maker needs.</b> ${r!==g&&!overlap?'Better is not the same as good enough. ':''}The test does not show the service is good enough. A bigger test, or a person who checks every read, belongs in the memo.</p>`;
+    if(need>80) v+=`<p class="muted" style="margin:8px 0 0;font-size:.92rem">With only 15 photos, even a perfect 15 of 15 starts at 80 percent. No 15-photo test can prove a bar above 80. To prove a high bar, you need far more photos.</p>`;
+    $('#rgVerdict').innerHTML=v; };
+  $('#rgTries').innerHTML=TR.map((t,i)=>`<button class="try" data-i="${i}"><b>Try it</b> ${t.l}</button>`).join('');
+  $$('#rgTries .try').forEach(b=>b.onclick=()=>{ const t=TR[+b.dataset.i]; $('#rgR').value=t.v[0]; $('#rgG').value=t.v[1]; $('#rgN').value=t.v[2]; draw(); $$('#rgTries .try').forEach(x=>x.classList.toggle('on',x===b)); $('#rgMsg').innerHTML=t.m; });
+  ['#rgR','#rgG','#rgN'].forEach(s=>$(s).oninput=()=>{ draw(); $('#rgMsg').innerHTML=''; $$('#rgTries .try').forEach(x=>x.classList.remove('on')); });
+  draw();
+};
+
+/* service names */
+INIT.names3 = () => {
+  const S=[['Amazon Rekognition','I'],['Cloud Natural Language','T'],['Azure Speech in Foundry Tools','S'],['Amazon Comprehend','T'],['Cloud Vision','I'],['Amazon Transcribe','S'],['Azure Language in Foundry Tools','T'],['Speech-to-Text','S'],['Azure Vision in Foundry Tools','I']];
+  const L={I:'Reads images',T:'Reads text',S:'Turns speech into text'}; let sc=0, done=0;
+  $('#svcItems').innerHTML=S.map((s,i)=>`<div class="q" style="padding:8px 14px;margin:6px 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center"><div class="qt" style="margin:0;min-width:16em">${s[0]}</div><div class="opts">${Object.keys(L).map(k=>`<button class="opt" data-i="${i}" data-k="${k}">${L[k]}</button>`).join('')}</div></div>`).join('');
+  $$('#svcItems .opt').forEach(b=>b.onclick=()=>{ const s=S[b.dataset.i], w=b.closest('.q'); if(w.dataset.done) return; w.dataset.done=1; done++;
+    const ok=b.dataset.k===s[1]; b.classList.add(ok?'right':'wrong','mine'); if(!ok) w.querySelector(`[data-k="${s[1]}"]`).classList.add('right');
+    if(ok) sc++; $('#svcScore').textContent=`${sc} / 9`; if(done===9) $('#svcTable').classList.add('show'); });
+};
+
+/* weighted matrix */
+INIT.matrix = () => {
+  const C=['Data location','Fit with existing systems','Ease of use','Cost','Explainability'], A=[5,2,3,4,4], B=[3,5,4,3,3], D=[30,25,20,15,10];
+  let w=[...D];
+  $('#mxWeights').innerHTML='<div class="muted" style="font-size:.88rem;margin-bottom:4px">Weights always add to 100 percent.</div>'+C.map((c,i)=>`<div class="wrow"><span>${c}</span><input type="range" min="0" max="60" value="${D[i]}" data-i="${i}" aria-label="Weight for ${c}"><span id="mxw${i}">${D[i]}%</span></div>`).join('');
+  const draw=()=>{ const tot=w.reduce((a,b)=>a+b,0)||1, nw=w.map(x=>x/tot);
+    nw.forEach((x,i)=>$('#mxw'+i).textContent=Math.round(x*100)+'%');
+    const ta=nw.reduce((s,x,i)=>s+x*A[i],0), tb=nw.reduce((s,x,i)=>s+x*B[i],0);
+    $('#mxTable').innerHTML='<tr><th>Criterion</th><th>Weight</th><th>A score</th><th>A weighted</th><th>B score</th><th>B weighted</th></tr>'+C.map((c,i)=>`<tr><td>${c}</td><td class="mono">${Math.round(nw[i]*100)}%</td><td class="mono">${A[i]}</td><td class="mono">${(nw[i]*A[i]).toFixed(2)}</td><td class="mono">${B[i]}</td><td class="mono">${(nw[i]*B[i]).toFixed(2)}</td></tr>`).join('')+`<tr><td><b>Total</b></td><td class="mono">100%</td><td></td><td class="mono"><b class="${ta>tb?'good':''}">${ta.toFixed(2)}</b></td><td></td><td class="mono"><b class="${tb>ta?'good':''}">${tb.toFixed(2)}</b></td></tr>`;
+    const isD=w.every((x,i)=>x===D[i]);
+    $('#mxMsg').innerHTML = Math.abs(ta-tb)<.005 ? '<b>A tie.</b> The weights alone cannot decide. Look at what the numbers leave out.'
+      : (ta>tb?'<b class="good">Platform A wins.</b> ':'<b>Platform B wins.</b> ')+`${Math.max(ta,tb).toFixed(2)} to ${Math.min(ta,tb).toFixed(2)}.`
+      + (isD?' These are the clinic\'s weights. B wins narrowly, mainly because it connects to systems the clinic already uses.':ta>tb?' To make A win, you had to care more about where the data is stored than about fitting existing systems. Could you defend that choice to the clinic director?':'');
+  };
+  $$('#mxWeights input').forEach(r=>r.oninput=()=>{ w[+r.dataset.i]=+r.value; draw(); });
+  $('#mxReset').onclick=()=>{ w=[...D]; $$('#mxWeights input').forEach((r,i)=>r.value=D[i]); draw(); };
+  draw();
+};
+
+/* total cost of ownership */
+INIT.tco = () => {
+  const F=['#tImg','#tPrice','#tHrs','#tRate','#tSetup','#tMon'];
+  const draw=()=>{ const [img,price,hrs,rate,setup,mon]=F.map(f=>Math.max(0,+$(f).value||0));
+    const parts=[['Service fee (price list)',img*12/1000*price,'--accent'],['Staff checking results',hrs*52*rate,'--amber'],['Setup and data preparation',setup,'--violet'],['Monitoring and retraining',mon,'--good']];
+    const tot=parts.reduce((s,p)=>s+p[1],0)||1, mx=Math.max(...parts.map(p=>p[1]),1);
+    $('#tBars').innerHTML=parts.map(p=>`<div class="hbar"><span>${p[0]}</span><div class="trk"><div class="fill" style="left:0;width:${p[1]/mx*100}%;background:var(${p[2]})"></div></div><span class="v">${money(p[1])}</span></div>`).join('');
+    $('#tTotal').innerHTML=`<div class="muted">Year-one total cost of ownership</div><div class="stat">${money(tot)}</div><div class="muted" style="margin-top:6px">The price list is <b>${(parts[0][1]/tot*100).toFixed(0)} percent</b> of the real cost.</div>`; };
+  const T=[{l:'The price list only',v:[40000,1.5,0,45,0,0],m:'<b>$720 a year.</b> 480,000 photos at $1.50 per 1,000. This is the number on the vendor\'s website.'},
+   {l:'Add a person who checks the results',v:[40000,1.5,10,45,0,0],m:'The service makes mistakes, like reading $3.25 as $3.75 with high confidence. Someone spends 10 hours a week checking. That costs <b>$23,400</b>, more than 30 times the service fee.'},
+   {l:'Add setup and monitoring',v:[40000,1.5,10,45,8000,3000],m:'Preparing the photos and connecting the systems costs $8,000. Watching for drift and retraining costs $3,000 a year. The real year-one cost is <b>$35,120</b>.'},
+   {l:'Double the photos',v:[80000,1.5,10,45,8000,3000],m:'Twice the photos adds only $720 in fees. The staff time is what drives the cost. Accuracy on <b>your</b> photos decides how much checking you need, which is why your project measures it yourself.'}];
+  $('#tTries').innerHTML=T.map((t,i)=>`<button class="try" data-i="${i}"><b>Try it</b> ${t.l}</button>`).join('');
+  $$('#tTries .try').forEach(b=>b.onclick=()=>{ const t=T[+b.dataset.i]; F.forEach((f,i)=>$(f).value=t.v[i]); draw(); $$('#tTries .try').forEach(x=>x.classList.toggle('on',x===b)); $('#tMsg').innerHTML=t.m; });
+  F.forEach(f=>$(f).oninput=()=>{ draw(); $('#tMsg').innerHTML=''; $$('#tTries .try').forEach(x=>x.classList.remove('on')); });
+  draw();
+};
+
+/* checks */
+const ROOT=['The wrong problem','Not enough good data','Chasing the technology','Weak infrastructure','A problem too hard for AI'];
+const PRIN=['Make sure the builders understand the purpose','Choose enduring problems','Focus on the problem, not the technology','Invest in infrastructure','Understand AI\'s limits'];
+const ERR=['False positive (a false alarm)','False negative (a miss)','Correct alert','Correct pass'];
+const PARTS=['Data pipeline','Model','Inference','Interface','Monitoring'];
+const BCB=['Buy','Customize','Build'];
+const CHECKS={
+ cause:[['A hospital buys an AI tool that predicts sepsis, a dangerous reaction to infection. Nurses ignore its alerts because the tool reads vital signs that are typed in hours after the nurses have already seen the patient.',ROOT,3,'Weak infrastructure. The data reaches the model hours late. The model may be fine. The systems that move data to it are not.'],
+  ['A company spends a year building a model that predicts which employees will quit. Managers say they already knew. What they needed was help keeping those people.',ROOT,0,'The wrong problem. The model is accurate and nobody needs it.'],
+  ['A bakery owner buys a GenAI chatbot to plan each day\'s baking, when averaging last month\'s sales would do the job.',ROOT,2,'Chasing the technology. The tool was picked because it was exciting, not because it fit.'],
+  ['A squadron wants to predict a rare part failure that has happened twice in ten years.',ROOT,4,'A problem too hard for AI. Two examples are not enough to learn from. "Not enough good data" is a fair second answer.'],
+  ['A city predicts where potholes will form using reports from a phone app. Mostly residents of newer neighborhoods use the app.',ROOT,1,'Not enough good data. The data does not match the real problem: it shows where app users live, not where the potholes are.'],
+  ['The flight line\'s maintenance records sit in three systems that do not connect.',ROOT,3,'Weak infrastructure. The organization cannot move its own data to a model.']],
+ principle:[['A superintendent reads that the school district in the next town gives every student an AI tutor. She orders AI tutors for all of her own schools, starting next month, so her district does not fall behind. Which principle does this break most clearly?',PRIN,2,'Focus on the problem, not the technology. It starts from a tool and another district\'s news, not a need. It also breaks the year commitment and skips a pilot.'],
+  ['Why does RAND suggest committing a team to one problem for at least a year?',['AI projects take time to define, gather data, test, and pilot','Vendors require one-year contracts','Models need a year of computing time','It stops the team from asking questions'],0,'AI projects take time. If a problem is not worth a year, it is probably not worth an AI project.'],
+  ['Who is most likely to know that a box on a maintenance form is filled in carelessly at the end of a shift?',['The data scientist','The vendor','A senior maintainer','The project sponsor'],2,'A senior maintainer: the domain expert who has done the work.'],
+  ['A simple method gets 80 percent of the benefit at 5 percent of the cost of an AI system. What should the analyst recommend?',['The simple method, even if the boss wants AI','The AI, because it is 20 percent better','Both at once','Wait for better AI'],0,'The simple method. A good analyst says so even when the boss wants AI.']],
+ error:[['A bank\'s fraud system blocks a customer\'s card during a real purchase.',ERR,0,'False positive. The system raised an alarm, and nothing was wrong.'],
+  ['A reading screener says a student is on track. The student is actually struggling.',ERR,1,'False negative. The system missed a real problem.'],
+  ['The flight line model flags a part, and the inspection finds a crack.',ERR,2,'Correct alert, also called a true positive.'],
+  ['At the school, a false flag labels a child who was fine. Which design fits?',['Act on every flag automatically','A teacher reviews every flag before acting','Turn off the flags to avoid labels','Flag only the top 1 percent'],1,'A teacher reviews every flag. The system helps the teacher look, and the teacher decides.'],
+  ['On the flight line, a miss costs far more than a false alarm. The system should lean toward:',['Flagging more parts and accepting more false alarms','Flagging fewer parts and accepting more misses','Flagging no parts','Letting the vendor decide'],0,'Flag more. The cost lab showed the cheapest setting flags generously.']],
+ cycle:[['The bakery\'s model worked well for a year. Then a school opened next door, and the model keeps underestimating morning pastry sales. What happened?',['Drift','A data leak','A bad API key','The model was always wrong'],0,'Drift. The world changed and the model did not. Phase 6, monitoring, catches it.'],
+  ['Who should make the decision at the gate after phase 2 (assess the data)?',['The project sponsor, advised by domain experts and data specialists','The vendor','The builders alone','Whoever wrote the code'],0,'The sponsor has the authority and budget. The experts and data specialists know whether the data is good enough.'],
+  ['Why do so many projects break in phase 4 (test)?',['Only overall accuracy is reported, so weak spots for some groups stay hidden','Testing is too expensive','Models cannot be tested','Users do the testing'],0,'One overall number hides weak spots. The clinic\'s model was fine overall and poor for patients over 65.'],
+  ['Which root cause does Watson for Oncology show most clearly?',ROOT,4,'A problem too hard for AI: replacing expert cancer judgment. Not enough good data is close behind.'],
+  ['A system drifts for a year and nobody notices. What was missing?',['A person responsible for watching it after launch','A bigger model','A second vendor','More data at launch'],0,'An operations owner. When nobody has the job of checking the system, it can get worse for months before anyone notices.']],
+ parts:[['The school\'s model predicts struggling readers accurately, but the results go into a spreadsheet only the district office opens.',PARTS,3,'Interface. The prediction never reaches the teacher who would act on it.'],
+  ['Maintainers override the flight line\'s alerts more and more often. What should the operations owner do?',['Investigate why: check accuracy, drift, and whether the alerts are useful','Order maintainers to follow every alert','Stop recording overrides','Buy a bigger model'],0,'Investigate. A rising override rate means users stopped trusting the system, often for good reason.'],
+  ['Does the clinic\'s no-show prediction need batch or real-time inference?',['Batch, ready before the clinic opens','Real time, in under a second'],0,'Batch. Nobody acts on it in seconds.'],
+  ['The flight line logs the same part as "hyd pump," "hydraulic pump," and "HP-2."',PARTS,0,'Data pipeline. Cleaning and organizing data is the pipeline\'s job.'],
+  ['The model\'s accuracy falls slowly for six months and nobody notices.',PARTS,4,'Monitoring.']],
+ cloud:[['A developer posts an app\'s code online and accidentally includes the API key. Why is that a problem?',['Anyone can make requests billed to the key owner\'s account','The code stops working','The vendor deletes the model','Nothing; keys are public'],0,'Anyone with the key can run up charges in the owner\'s name. Keys are guarded like passwords.'],
+  ['Which scenario faces the fewest data rules if it uses a cloud service?',['The flight line','The clinic','The school','The bakery'],3,'The bakery. Price tags and sales numbers carry far fewer rules than maintenance logs, patient records, or student records.'],
+  ['Before the clinic scores a platform, the vendor must agree to what?',['Sign a Business Associate Agreement (BAA)','Offer a free trial','Use the newest model','Store data in the United States only'],0,'A BAA, required under HIPAA for patient health information.'],
+  ['Why remove platforms that fail a must-have before scoring?',['A high score elsewhere cannot make up for a rule you must meet','It makes the math shorter','Vendors prefer it','Must-haves have zero weight'],0,'A must-have is pass or fail. No weighting can make an illegal choice legal.'],
+  ['A platform charges nothing to upload data but charges to move data out. Why does that matter?',['Leaving gets expensive, which adds to vendor lock-in','Uploads are slower','The data becomes free','It does not matter'],0,'Exit fees are part of lock-in and part of the total cost.'],
+  ['The flight line wants to predict part failures from its own maintenance history.',BCB,2,'Build. No vendor has trained a model on your fleet.'],
+  ['The bakery wants to read customer reviews and flag complaints.',BCB,0,'Buy. Reading text is a common task.'],
+  ['The school wants a speech tool that scores how accurately young children read a passage aloud.',BCB,1,'Customize. Speech-to-text is common, but children\'s voices and reading mistakes are special.'],
+  ['Rekognition reads a price tag that says $3.25 as "$3.75," with a confidence score of 96.8. What does the score tell you?',['The service rates its own answer as very likely correct, which does not make it correct','There is a 96.8 percent chance the read is right','The read is correct','The photo is 96.8 percent clear'],0,'The score is the service grading itself. The read is still wrong. Only your answer key tells you that.'],
+  ['A label says "Chiken Broth 11/14." Gemini returns "Chicken Broth 11/14." Under the project\'s scoring rule, is the read correct?',['Wrong: one letter does not match the key','Correct: Gemini fixed a spelling mistake','Correct: capital letters do not count','It depends on the confidence score'],0,'Wrong. Every letter, number, and symbol must match. Gemini wrote what it expected, not what it saw, and it gave no confidence score to warn you.'],
+  ['A tag says "$6.00." A service returns "$6.00 " with an extra space at the end. Correct or wrong?',['Correct: extra spaces do not count','Wrong: every character must match'],0,'Correct. The rule ignores capital letters and extra spaces. Everything else must match.'],
+  ['Rekognition reads 12 of 15 photos correctly (plausible range 55 to 93 percent). Gemini reads 11 of 15 (48 to 89 percent). What should the memo say?',['The test can\'t tell which service is better, because the ranges overlap','Rekognition is better, because 12 is more than 11','Gemini is better, because its range is lower','Both services are good enough for any scenario'],0,'The ranges overlap almost completely. One more correct photo is not evidence. Saying so is an honest finding.'],
+  ['Why do you write the answer key before you test either service?',['So you can\'t grade the services too generously after you see their answers','Because the services need it to run','To use fewer tokens','Because the vendor requires it'],0,'If you decide what "correct" means after you see the results, you will be too generous. The key keeps the test honest.']]
+};
+$$('.checkset').forEach(box=>{
+  const set=CHECKS[box.dataset.check]; let sc=0;
+  const hash=t=>{ let h=2166136261; for(const ch of t){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; };
+  const order=q=>{ const k=q[1].length; if(k<=2) return q[1].map((o,j)=>j);
+    const rest=q[1].map((o,j)=>j).filter(j=>j!==q[2]).sort((a,b)=>hash(q[0]+'|'+q[1][a])-hash(q[0]+'|'+q[1][b]));
+    rest.splice(hash(q[0])%k,0,q[2]); return rest; };
+  box.innerHTML=set.map((q,i)=>`<div class="q"><div class="qt">${i+1}. ${q[0]}</div><div class="opts">${order(q).map(j=>`<button class="opt" data-q="${i}" data-j="${j}">${q[1][j]}</button>`).join('')}</div><div class="why"></div></div>`).join('')+`<p>Score: <span class="score">0 / ${set.length}</span></p>`;
+  box.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{ const q=set[b.dataset.q], wrap=b.closest('.q'); if(wrap.dataset.done) return; wrap.dataset.done=1;
+    const sv=store.get('u3checks',{}); (sv[box.dataset.check]=sv[box.dataset.check]||{})[b.dataset.q]=+b.dataset.j; store.set('u3checks',sv);
+    const ok=+b.dataset.j===q[2]; b.classList.add(ok?'right':'wrong','mine'); wrap.querySelector(`.opt[data-j="${q[2]}"]`).classList.add('right');
+    const w=wrap.querySelector('.why'); w.innerHTML=`<b class="${ok?'good':'bad'}">${ok?'Correct.':'Not this one.'}</b> ${q[3]}`; w.classList.add('show');
+    if(ok) sc++; box.querySelector('.score').textContent=`${sc} / ${set.length}`; });
+});
+
+/* restore saved check answers */
+(function(){ const sv=store.get('u3checks',{});
+  Object.keys(sv).forEach(k=>{ const box=document.querySelector(`.checkset[data-check="${k}"]`); if(!box) return;
+    Object.keys(sv[k]).forEach(qi=>{ const b=box.querySelector(`.opt[data-q="${qi}"][data-j="${sv[k][qi]}"]`); if(b) b.click(); }); }); })();
+
+/* save anything typed in a text box (students' own answers and notes) */
+(function(){ const sv=store.get('u3text',{});
+  $$('.slide input[type=text]').forEach(el=>{ if(!el.id||el.id.startsWith('lc')) return; if(sv[el.id]) el.value=sv[el.id];
+    el.addEventListener('input',()=>{ sv[el.id]=el.value; store.set('u3text',sv); }); }); })();
+
+/* print the whole lecture: build every interactive page first so nothing prints empty */
+function printAll(){
+  slides.forEach(s=>{ const k=s.dataset.init; if(k && !inited[k] && INIT[k]){ inited[k]=true; try{ INIT[k](s); }catch(e){} } });
+  if(inited.sentence) $('#sWho').dispatchEvent(new Event('input'));
+  window.print();
+}
+$('#bPrint').onclick=printAll; $('#printAll2').onclick=printAll;
+
+/* ---------- start ---------- */
+const startAt = Math.min(store.get('u3page',0), slides.length-1);
+slides[startAt].classList.add('active'); cur=startAt; update();
+</script>
+</body>
+</html>
